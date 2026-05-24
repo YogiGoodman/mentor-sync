@@ -31,46 +31,61 @@ All dependencies are open-source or free-tier.
 ### Prerequisites
 
 - Node.js 18+
-- A [Supabase](https://supabase.com) project (free tier works)
+- A free [Supabase](https://supabase.com) account and project
 
-### Setup
+### 1. Clone and Install
 
 ```bash
-# Clone the repository
 git clone https://github.com/your-username/mentor-sync.git
 cd mentor-sync
-
-# Install dependencies
 npm install
-
-# Copy environment template
-cp .env.local.example .env.local
-# Fill in your Supabase URL and keys
 ```
 
-### Database Setup
+### 2. Configure Environment
 
-1. Go to your Supabase project's SQL Editor
-2. Run the migration file: `supabase/migrations/001_initial_schema.sql`
-3. This creates all tables, indexes, RLS policies, and the auto-profile trigger
+```bash
+cp .env.local.example .env.local
+```
 
-### Seed Data (Optional)
+Open `.env.local` and fill in your Supabase credentials:
 
-After creating a mentor account and a mentee account:
+| Variable | Where to find it |
+|----------|-----------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Dashboard > Settings > General > Project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase Dashboard > Settings > API Keys > Publishable key |
+| `SUPABASE_SECRET_KEY` | Supabase Dashboard > Settings > API Keys > Secret key |
+
+If you don't have a publishable key yet, click **Create new API Keys** in the API Keys tab.
+
+### 3. Set Up the Database
+
+1. Open your Supabase project's **SQL Editor**
+2. Paste and run the contents of `supabase/migrations/001_initial_schema.sql`
+3. This creates all tables, indexes, Row Level Security policies, and an auto-profile trigger
+
+### 4. Create Accounts
+
+1. Start the app (`npm run dev`) and open [http://localhost:3000](http://localhost:3000)
+2. Sign up a **Mentor** account (select "Mentor" role)
+3. Sign up a **Mentee** account (select "Mentee" role)
+
+### 5. Seed Sample Data (Optional)
+
+Once both accounts exist, seed the sample 16-week learning plan:
 
 ```bash
 npm run seed
 ```
 
-This inserts the sample 16-week Cloud Engineer plan.
+This creates the plan under the first mentor and assigns it to the first mentee.
 
-### Run Development Server
+### 6. Run Development Server
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000). Log in as either role to see the dashboard.
 
 ## Project Structure
 
@@ -111,7 +126,7 @@ Deploy to Vercel with zero configuration:
 
 Set environment variables in Vercel's dashboard:
 - `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 
 ## License
 
