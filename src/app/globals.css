@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
+}
+
+.dark {
+  --background: #0b1120;
+  --foreground: #e2e8f0;
 }
 
 @theme inline {
@@ -16,4 +23,46 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-8px) rotate(1deg); }
+}
+
+@keyframes doodle-float {
+  0%, 100% { transform: translateY(0) rotate(var(--doodle-rot, 0deg)); }
+  50% { transform: translateY(-6px) rotate(var(--doodle-rot, 0deg)); }
+}
+
+.animate-hero-float {
+  animation: hero-float 6s ease-in-out infinite;
+}
+
+.animate-doodle-float {
+  animation: doodle-float 5s ease-in-out infinite;
+}
+
+.animate-doodle-float-delayed {
+  animation: doodle-float 7s ease-in-out infinite 1.5s;
+}
+
+.bg-grid-fade {
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(15, 23, 42, 0.06) 1px, transparent 0);
+  background-size: 28px 28px;
+}
+
+.dark .bg-grid-fade {
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(226, 232, 240, 0.08) 1px, transparent 0);
+}
+
+/* Override browser autofill background in dark mode */
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #1e293b inset;
+  box-shadow: 0 0 0px 1000px #1e293b inset;
+  -webkit-text-fill-color: #f1f5f9;
 }

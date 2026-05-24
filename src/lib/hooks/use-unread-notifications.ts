@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   fetchUnreadCounts,
@@ -18,7 +18,9 @@ const EMPTY: UnreadCounts = {
 
 export function useUnreadNotifications(userId: string, role: string) {
   const [counts, setCounts] = useState<UnreadCounts>(EMPTY);
-  const supabase = createClient();
+  // Memoize so the realtime channel isn't torn down + rebuilt every render,
+  // which caused mentor notifications to arrive only after a manual refresh.
+  const supabase = useMemo(() => createClient(), []);
 
   const refresh = useCallback(async () => {
     let planIds: string[] = [];

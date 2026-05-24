@@ -1,5 +1,37 @@
 -- MentorSync consolidated schema
--- Single canonical migration. Run on a fresh database.
+-- Single canonical migration. Safe to re-run: the DROP block below clears
+-- all MentorSync objects first, so applying this file always lands the
+-- database in a known-good state.
+--
+-- WARNING: the DROP block deletes every MentorSync table, function, policy,
+-- and trigger. All plan/task/comment data is lost. Do not run on a database
+-- that already contains data you want to keep.
+
+-- =====================================================================
+-- 0. Drop existing MentorSync objects (idempotent fresh-start block)
+-- =====================================================================
+
+-- Trigger on auth.users must be dropped before the function it calls.
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
+
+-- Tables (CASCADE drops dependent policies, indexes, FKs).
+DROP TABLE IF EXISTS public.task_comment_reads CASCADE;
+DROP TABLE IF EXISTS public.plan_chat_reads     CASCADE;
+DROP TABLE IF EXISTS public.plan_messages       CASCADE;
+DROP TABLE IF EXISTS public.comments            CASCADE;
+DROP TABLE IF EXISTS public.tasks               CASCADE;
+DROP TABLE IF EXISTS public.phases              CASCADE;
+DROP TABLE IF EXISTS public.plan_assignments    CASCADE;
+DROP TABLE IF EXISTS public.plans               CASCADE;
+DROP TABLE IF EXISTS public.profiles            CASCADE;
+
+-- Helper functions (drop after tables so dependent policies are gone).
+DROP FUNCTION IF EXISTS public.get_plan_id_for_task(uuid)  CASCADE;
+DROP FUNCTION IF EXISTS public.get_plan_id_for_phase(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.can_access_plan(uuid)       CASCADE;
+DROP FUNCTION IF EXISTS public.is_plan_assigned_mentee(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.is_plan_creator(uuid)       CASCADE;
 
 -- =====================================================================
 -- 1. Tables

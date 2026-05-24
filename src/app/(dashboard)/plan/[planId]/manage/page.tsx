@@ -181,7 +181,7 @@ export default function ManagePlanPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600 dark:border-slate-700 dark:border-t-emerald-400" />
       </div>
     );
   }
@@ -194,15 +194,15 @@ export default function ManagePlanPage() {
       <div className="flex items-center gap-4">
         <Link
           href={`/plan/${plan.id}`}
-          className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
             Manage: {plan.title}
           </h1>
-          <p className="mt-0.5 text-sm text-slate-500">
+          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
             {plan.total_weeks} weeks &middot; {tasks.length} tasks &middot;{" "}
             {assignedMentees.length} mentee(s)
           </p>
@@ -210,15 +210,15 @@ export default function ManagePlanPage() {
       </div>
 
       {/* Assign Mentees */}
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-center gap-2 mb-3">
-          <UserPlus className="h-4 w-4 text-slate-500" />
-          <h2 className="text-sm font-semibold text-slate-700">
+          <UserPlus className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
             Assigned Mentees
           </h2>
         </div>
         {mentees.length === 0 ? (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             No mentee accounts exist yet.
           </p>
         ) : (
@@ -231,8 +231,8 @@ export default function ManagePlanPage() {
                   onClick={() => toggleMenteeAssignment(mentee.id)}
                   className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
                     isAssigned
-                      ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                      : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200"
+                      ? "bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30"
+                      : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700"
                   }`}
                 >
                   {mentee.name}
@@ -254,27 +254,27 @@ export default function ManagePlanPage() {
           return (
             <div
               key={phase.id}
-              className="rounded-xl border border-slate-200 bg-white shadow-sm"
+              className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
             >
-              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
                 <div>
-                  <h3 className="font-semibold text-slate-900">
+                  <h3 className="font-semibold text-slate-900 dark:text-white">
                     Phase {phase.phase_number}: {phase.title}
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     {phaseTasks.length} tasks
                   </p>
                 </div>
                 <button
                   onClick={() => deletePhase(phase.id)}
-                  className="rounded-md p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500"
+                  className="rounded-md p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 dark:text-slate-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
                   title="Delete phase"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
 
-              <div className="divide-y divide-slate-50 px-5">
+              <div className="divide-y divide-slate-50 px-5 dark:divide-slate-800/60">
                 {phaseTasks.map((task) =>
                   editingTaskId === task.id ? (
                     <div key={task.id} className="py-2.5">
@@ -299,7 +299,7 @@ export default function ManagePlanPage() {
                       <Badge variant={task.task_type} className="shrink-0">
                         W{task.week_number}
                       </Badge>
-                      <span className="flex-1 text-sm text-slate-700 truncate">
+                      <span className="flex-1 text-sm text-slate-700 truncate dark:text-slate-200">
                         {task.title}
                       </span>
                       <Badge variant={task.task_type}>
@@ -307,14 +307,14 @@ export default function ManagePlanPage() {
                       </Badge>
                       <button
                         onClick={() => startEditTask(task)}
-                        className="rounded p-1 text-slate-300 hover:text-slate-700"
+                        className="rounded p-1 text-slate-300 hover:text-slate-700 dark:text-slate-600 dark:hover:text-slate-200"
                         title="Edit task"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
                       <button
                         onClick={() => deleteTask(task.id)}
-                        className="rounded p-1 text-slate-300 hover:text-red-500"
+                        className="rounded p-1 text-slate-300 hover:text-red-500 dark:text-slate-600 dark:hover:text-red-400"
                         title="Delete task"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -326,7 +326,7 @@ export default function ManagePlanPage() {
 
               {/* Add task inline */}
               {addingTaskPhaseId === phase.id ? (
-                <div className="border-t border-slate-100 px-5 py-3">
+                <div className="border-t border-slate-100 px-5 py-3 dark:border-slate-800">
                   <TaskRowEditor
                     title={newTaskTitle}
                     taskType={newTaskType}
@@ -341,7 +341,7 @@ export default function ManagePlanPage() {
                   />
                 </div>
               ) : (
-                <div className="border-t border-slate-100 px-5 py-3">
+                <div className="border-t border-slate-100 px-5 py-3 dark:border-slate-800">
                   <button
                     onClick={() => {
                       setAddingTaskPhaseId(phase.id);
@@ -349,7 +349,7 @@ export default function ManagePlanPage() {
                       setNewTaskWeek(1);
                       setEditingTaskId(null);
                     }}
-                    className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700"
+                    className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     Add task
@@ -362,10 +362,10 @@ export default function ManagePlanPage() {
       </div>
 
       {/* Add Phase */}
-      <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5">
+      <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
         <div className="flex items-end gap-3">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1 dark:text-slate-300">
               Add New Phase
             </label>
             <input
@@ -373,14 +373,14 @@ export default function ManagePlanPage() {
               value={newPhaseTitle}
               onChange={(e) => setNewPhaseTitle(e.target.value)}
               placeholder="Phase title..."
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-emerald-500 dark:focus:ring-emerald-500"
               onKeyDown={(e) => e.key === "Enter" && addPhase()}
             />
           </div>
           <button
             onClick={addPhase}
             disabled={!newPhaseTitle.trim()}
-            className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500"
           >
             <Plus className="h-4 w-4" />
             Add Phase

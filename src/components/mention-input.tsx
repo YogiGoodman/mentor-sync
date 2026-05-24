@@ -3,13 +3,19 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { TaskWithCommentCount } from "@/lib/types/database";
 import { buildMentionToken, parseMentions } from "@/lib/mentions";
-import { Send, AtSign } from "lucide-react";
+import { Send, AtSign, X } from "lucide-react";
 
 interface MentionInputProps {
   tasks: TaskWithCommentCount[];
   onSend: (content: string) => Promise<void>;
   placeholder?: string;
 }
+
+const LINE_HEIGHT = 21;
+const VERTICAL_PADDING = 16;
+const MAX_LINES = 6;
+const MIN_HEIGHT = 38;
+const MAX_HEIGHT = MAX_LINES * LINE_HEIGHT + VERTICAL_PADDING;
 
 export function MentionInput({
   tasks,
@@ -52,6 +58,18 @@ export function MentionInput({
     }
   }, [getAtPosition]);
 
+  const autoResize = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const next = Math.min(Math.max(el.scrollHeight, MIN_HEIGHT), MAX_HEIGHT);
+    el.style.height = next + "px";
+  }, []);
+
+  useEffect(() => {
+    autoResize();
+  }, [rawValue, autoResize]);
+
   function insertMention(task: TaskWithCommentCount) {
     const at = getAtPosition();
     if (!at) return;
@@ -70,7 +88,23 @@ export function MentionInput({
     }, 0);
   }
 
-  // Build visual display value: replace [[task:id|title]] with @title for display
+  function removeMentionAt(chipIndex: number) {
+    let seen = 0;
+    const next = rawValue.replace(
+      /\[\[task:[0-9a-f-]+\|.+?\]\] ?/g,
+      (match) => {
+        if (seen === chipIndex) {
+          seen++;
+          return "";
+        }
+        seen++;
+        return match;
+      }
+    );
+    setRawValue(next);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
   const displayValue = rawValue.replace(
     /\[\[task:[0-9a-f-]+\|(.+?)\]\]/g,
     "@$1"
@@ -84,6 +118,11 @@ export function MentionInput({
     await onSend(rawValue.trim());
     setRawValue("");
     setSending(false);
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.style.height = MIN_HEIGHT + "px";
+      }
+    }, 0);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -108,18 +147,17 @@ export function MentionInput({
     }
   }
 
-  // We use a layered approach: hidden textarea with raw tokens, visible overlay with styled display
   const hasMentions = /\[\[task:/.test(rawValue);
+  let chipCounter = 0;
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="relative border-t border-slate-200 px-4 py-3"
+      className="relative border-t border-slate-200 px-4 py-3 dark:border-slate-800"
     >
-      {/* @mention autocomplete menu */}
       {showMenu && filteredTasks.length > 0 && (
-        <div className="absolute bottom-full left-4 right-4 mb-1 max-h-52 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg z-10">
-          <div className="px-3 py-1.5 text-[11px] font-medium text-slate-400 uppercase tracking-wide border-b border-slate-100">
+        <div className="absolute bottom-full left-4 right-4 mb-1 max-h-52 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg z-10 dark:border-slate-700 dark:bg-slate-800">
+          <div className="px-3 py-1.5 text-[11px] font-medium text-slate-400 uppercase tracking-wide border-b border-slate-100 dark:border-slate-700 dark:text-slate-500">
             Tasks
           </div>
           {filteredTasks.map((task, i) => (
@@ -128,17 +166,17 @@ export function MentionInput({
               type="button"
               className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 ${
                 i === menuIndex
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "text-slate-700 hover:bg-slate-50"
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                  : "text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
               }`}
               onMouseDown={(e) => {
                 e.preventDefault();
                 insertMention(task);
               }}
             >
-              <AtSign className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+              <AtSign className="h-3.5 w-3.5 shrink-0 text-emerald-500 dark:text-emerald-400" />
               <span className="font-medium truncate">{task.title}</span>
-              <span className="ml-auto shrink-0 text-[11px] text-slate-400">
+              <span className="ml-auto shrink-0 text-[11px] text-slate-400 dark:text-slate-500">
                 W{task.week_number}
               </span>
             </button>
@@ -148,37 +186,50 @@ export function MentionInput({
 
       <div className="flex items-end gap-2">
         <div className="relative flex-1">
-          {/* Visible display layer for mentions */}
           {hasMentions && (
             <div
-              className="pointer-events-none absolute inset-0 px-3 py-2 text-sm whitespace-pre-wrap break-words"
+              className="pointer-events-none absolute inset-0 px-3 py-2 text-sm whitespace-pre-wrap break-words overflow-hidden"
               aria-hidden="true"
             >
-              {parseMentions(rawValue).map((token, i) =>
-                token.type === "task" ? (
-                  <span
-                    key={i}
-                    className="inline-flex items-center rounded bg-emerald-100 px-1 py-0.5 text-xs font-medium text-emerald-700"
-                  >
-                    @{token.taskTitle}
-                  </span>
-                ) : (
+              {parseMentions(rawValue).map((token, i) => {
+                if (token.type === "task") {
+                  const idx = chipCounter++;
+                  return (
+                    <span
+                      key={i}
+                      className="pointer-events-auto group relative inline-block align-baseline font-medium text-emerald-700 underline decoration-emerald-400 decoration-dotted underline-offset-2 dark:text-emerald-300 dark:decoration-emerald-500"
+                      title={token.taskTitle}
+                    >
+                      <span className="inline-block max-w-[180px] truncate align-bottom">
+                        @{token.taskTitle}
+                      </span>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          removeMentionAt(idx);
+                        }}
+                        className="absolute -top-2 -right-2 hidden h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-white shadow group-hover:inline-flex hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                        aria-label={`Remove ${token.taskTitle}`}
+                      >
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </span>
+                  );
+                }
+                return (
                   <span key={i} className="invisible">
                     {token.value}
                   </span>
-                )
-              )}
+                );
+              })}
             </div>
           )}
           <textarea
             ref={inputRef}
             value={hasMentions ? displayValue : rawValue}
             onChange={(e) => {
-              if (!hasMentions) {
-                setRawValue(e.target.value);
-              } else {
-                setRawValue(e.target.value);
-              }
+              setRawValue(e.target.value);
               setCursorPos(e.target.selectionStart ?? 0);
             }}
             onSelect={(e) =>
@@ -189,14 +240,14 @@ export function MentionInput({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             rows={1}
-            className="w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-emerald-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-100 transition-all"
-            style={{ maxHeight: 96, minHeight: 38 }}
+            className="w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-emerald-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-100 transition-all overflow-y-auto dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-emerald-500 dark:focus:bg-slate-800 dark:focus:ring-emerald-500/20"
+            style={{ minHeight: MIN_HEIGHT, maxHeight: MAX_HEIGHT }}
           />
         </div>
         <button
           type="submit"
           disabled={!rawValue.trim() || sending}
-          className="flex h-[38px] w-[38px] items-center justify-center rounded-lg bg-emerald-600 text-white transition-colors hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+          className="flex h-[38px] w-[38px] items-center justify-center rounded-lg bg-emerald-600 text-white transition-colors hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 dark:bg-emerald-500 dark:hover:bg-emerald-400"
         >
           <Send className="h-4 w-4" />
         </button>

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Sheet } from "@/components/ui/sheet";
+import { Dialog } from "@/components/ui/dialog";
 import { useRealtimeComments } from "@/lib/hooks/use-realtime-comments";
 import { markTaskCommentsRead } from "@/lib/queries/notifications";
 import { useNotifications } from "@/lib/hooks/notifications-context";
 import { createClient } from "@/lib/supabase/client";
-import { Send } from "lucide-react";
+import { Send, MessageCircle } from "lucide-react";
 import type { TaskWithCommentCount } from "@/lib/types/database";
 
 interface CommentPanelProps {
@@ -53,22 +53,37 @@ export function CommentPanel({ task, userId, open, onClose }: CommentPanelProps)
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title={task?.title ?? "Comments"}>
-      <div className="flex h-full flex-col">
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={task?.title ?? "Comments"}
+      subtitle={
+        comments.length > 0
+          ? `${comments.length} comment${comments.length === 1 ? "" : "s"}`
+          : "Discuss this task"
+      }
+      maxWidthClass="max-w-lg"
+    >
+      <div className="flex h-[60vh] min-h-[320px] flex-col sm:h-[480px]">
+        <div className="flex-1 overflow-y-auto bg-slate-50/40 px-5 py-4 dark:bg-slate-900/40">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-600 dark:border-slate-700 dark:border-t-emerald-400" />
             </div>
           ) : comments.length === 0 ? (
-            <div className="py-12 text-center">
-              <p className="text-sm text-slate-500">
-                No comments yet. Start the conversation.
+            <div className="flex h-full flex-col items-center justify-center text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-500/15">
+                <MessageCircle className="h-6 w-6 text-emerald-500 dark:text-emerald-400" />
+              </div>
+              <p className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-200">
+                No comments yet
+              </p>
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                Start the conversation about this task.
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {comments.map((comment) => {
                 const isOwn = comment.user_id === userId;
                 const profile = comment.profiles;
@@ -77,25 +92,31 @@ export function CommentPanel({ task, userId, open, onClose }: CommentPanelProps)
                     key={comment.id}
                     className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
                   >
-                    <div
-                      className={`max-w-[80%] rounded-lg px-3.5 py-2.5 ${
-                        isOwn
-                          ? "bg-slate-900 text-white"
-                          : "bg-slate-100 text-slate-800"
-                      }`}
-                    >
+                    <div className="flex max-w-[80%] flex-col">
                       {!isOwn && profile && (
-                        <p className="mb-1 text-xs font-medium text-slate-500">
+                        <span className="mb-0.5 ml-1 text-[10px] font-medium text-slate-400 dark:text-slate-500">
                           {profile.name}
-                        </p>
+                        </span>
                       )}
-                      <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
-                      <p className="mt-1 text-[10px] text-slate-400">
+                      <div
+                        className={`rounded-2xl px-3.5 py-2 ${
+                          isOwn
+                            ? "bg-emerald-600 text-white rounded-br-md dark:bg-emerald-500"
+                            : "bg-white text-slate-800 ring-1 ring-slate-200 rounded-bl-md dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
+                        }`}
+                      >
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                          {comment.content}
+                        </p>
+                      </div>
+                      <span
+                        className={`mt-0.5 text-[10px] text-slate-400 dark:text-slate-500 ${isOwn ? "text-right" : "ml-1"}`}
+                      >
                         {new Date(comment.created_at).toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
-                      </p>
+                      </span>
                     </div>
                   </div>
                 );
@@ -105,29 +126,29 @@ export function CommentPanel({ task, userId, open, onClose }: CommentPanelProps)
           )}
         </div>
 
-        {/* Input */}
         <form
           onSubmit={handleSubmit}
-          className="border-t border-slate-200 px-6 py-4"
+          className="border-t border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900"
         >
           <div className="flex items-center gap-2">
             <input
               type="text"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type a message..."
-              className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              placeholder="Write a comment..."
+              autoFocus
+              className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-emerald-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-emerald-500 dark:focus:bg-slate-800 dark:focus:ring-emerald-500/20"
             />
             <button
               type="submit"
               disabled={!message.trim() || sending}
-              className="rounded-lg bg-slate-900 p-2 text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
+              className="flex h-[38px] w-[38px] items-center justify-center rounded-lg bg-emerald-600 text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-emerald-500 dark:hover:bg-emerald-400"
             >
               <Send className="h-4 w-4" />
             </button>
           </div>
         </form>
       </div>
-    </Sheet>
+    </Dialog>
   );
 }

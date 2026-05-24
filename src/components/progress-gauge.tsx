@@ -27,7 +27,7 @@ export function ProgressGauge({
         <path
           d={`M ${strokeWidth / 2} ${radius + strokeWidth / 2} A ${radius} ${radius} 0 0 1 ${radius * 2 + strokeWidth / 2} ${radius + strokeWidth / 2}`}
           fill="none"
-          stroke="#e2e8f0"
+          className="stroke-slate-200 dark:stroke-slate-700"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
         />
@@ -46,7 +46,7 @@ export function ProgressGauge({
           x={radius + strokeWidth / 2}
           y={radius - 6}
           textAnchor="middle"
-          className="fill-slate-900"
+          className="fill-slate-900 dark:fill-white"
           fontSize="26"
           fontWeight="800"
         >
@@ -56,7 +56,7 @@ export function ProgressGauge({
           x={radius + strokeWidth / 2}
           y={radius + 14}
           textAnchor="middle"
-          className="fill-slate-400"
+          className="fill-slate-400 dark:fill-slate-500"
           fontSize="11"
           fontWeight="500"
         >

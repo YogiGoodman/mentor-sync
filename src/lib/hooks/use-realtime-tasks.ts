@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Task, Phase, TaskWithCommentCount } from "@/lib/types/database";
 
 export function useRealtimeTasks(phaseIds: string[]) {
   const [tasks, setTasks] = useState<TaskWithCommentCount[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const fetchTasks = useCallback(async () => {
     if (phaseIds.length === 0) {

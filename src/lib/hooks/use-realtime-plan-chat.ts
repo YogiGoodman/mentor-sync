@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { PlanMessage } from "@/lib/types/database";
 import { extractMentionTaskIds } from "@/lib/mentions";
@@ -12,7 +12,7 @@ export function useRealtimePlanChat(planId: string | null) {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const initialLoadDone = useRef(false);
 
   const fetchMessages = useCallback(async () => {

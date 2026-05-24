@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Comment } from "@/lib/types/database";
 
 export function useRealtimeComments(taskId: string | null) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const fetchComments = useCallback(async () => {
     if (!taskId) {

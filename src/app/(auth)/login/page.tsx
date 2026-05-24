@@ -40,20 +40,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50">
-      <div className="w-full max-w-md space-y-8 rounded-xl bg-white p-8 shadow-lg">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="w-full max-w-md space-y-8 rounded-xl bg-white p-8 shadow-lg dark:bg-slate-900 dark:ring-1 dark:ring-slate-800">
         <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             MentorSync
           </h1>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             Sign in to your account
           </p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
           {error && (
-            <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+            <div className="rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">
               {error}
             </div>
           )}
@@ -61,7 +61,7 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-slate-700"
+              className="block text-sm font-medium text-slate-700 dark:text-slate-300"
             >
               Email
             </label>
@@ -72,7 +72,7 @@ export default function LoginPage() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-emerald-500 dark:focus:ring-emerald-500"
               placeholder="you@example.com"
             />
           </div>
@@ -80,7 +80,7 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-slate-700"
+              className="block text-sm font-medium text-slate-700 dark:text-slate-300"
             >
               Password
             </label>
@@ -91,7 +91,7 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-emerald-500 dark:focus:ring-emerald-500"
               placeholder="••••••••"
             />
           </div>
@@ -99,17 +99,17 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:opacity-50"
+            className="w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500 dark:focus:ring-emerald-500 dark:focus:ring-offset-slate-900"
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
 
-        <p className="text-center text-sm text-slate-600">
+        <p className="text-center text-sm text-slate-600 dark:text-slate-400">
           Don&apos;t have an account?{" "}
           <Link
             href="/signup"
-            className="font-medium text-slate-900 hover:underline"
+            className="font-medium text-slate-900 hover:underline dark:text-emerald-400"
           >
             Sign up
           </Link>

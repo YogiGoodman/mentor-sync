@@ -7,6 +7,16 @@ function localDateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+// Supabase realtime delivers TIMESTAMPTZ as raw postgres format
+// (e.g. "2026-05-24 10:30:45.123456+00") which Safari/strict parsers
+// reject. Normalize to ISO 8601 before constructing a Date.
+function parseTimestamp(value: string): Date {
+  const normalized = value.includes("T")
+    ? value
+    : value.replace(" ", "T").replace(/([+-]\d{2})$/, "$1:00");
+  return new Date(normalized);
+}
+
 export const HEATMAP_COLORS = {
   empty: "#ebedf0",
   level1: "#9be9a8",
@@ -55,20 +65,30 @@ export function buildHeatmapData(
   start.setDate(start.getDate() + mondayOffset);
   start.setHours(0, 0, 0, 0);
 
-  const totalDays = totalWeeks * 7;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  // Ensure the grid always extends to at least today, rounded up to a full
+  // week so the grid stays 7 rows tall. Without this, plans whose start +
+  // totalWeeks window ends before today would have no cell to color when a
+  // task is completed today (gauge updates, heatmap doesn't).
+  const baseDays = totalWeeks * 7;
+  const todayOffset = Math.floor(
+    (today.getTime() - start.getTime()) / 86400000
+  );
+  const requiredDays = Math.max(baseDays, todayOffset + 1);
+  const totalDays = Math.ceil(requiredDays / 7) * 7;
+  const weeks = totalDays / 7;
 
   const completionsMap: Record<string, number> = {};
   for (const task of tasks) {
     if (task.completed_at) {
-      const dateKey = localDateKey(new Date(task.completed_at));
+      const dateKey = localDateKey(parseTimestamp(task.completed_at));
       completionsMap[dateKey] = (completionsMap[dateKey] || 0) + 1;
     }
   }
 
   const days: HeatmapDay[] = [];
-  const weeks = Math.ceil(totalDays / 7);
 
   for (let i = 0; i < totalDays; i++) {
     const date = new Date(start);
@@ -123,7 +143,7 @@ export function countActiveDays(tasks: TaskWithCommentCount[]): number {
   const dates = new Set<string>();
   for (const task of tasks) {
     if (task.completed_at) {
-      dates.add(localDateKey(new Date(task.completed_at)));
+      dates.add(localDateKey(parseTimestamp(task.completed_at)));
     }
   }
   return dates.size;
@@ -133,7 +153,7 @@ export function computeCurrentStreak(tasks: TaskWithCommentCount[]): number {
   const dates = new Set<string>();
   for (const task of tasks) {
     if (task.completed_at) {
-      dates.add(localDateKey(new Date(task.completed_at)));
+      dates.add(localDateKey(parseTimestamp(task.completed_at)));
     }
   }
 

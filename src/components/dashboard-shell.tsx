@@ -18,6 +18,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface DashboardShellProps {
   profile: Profile;
@@ -35,7 +36,7 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/");
     router.refresh();
   }
 
@@ -88,13 +89,13 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
   function NotifDropdown() {
     if (!notifOpen) return null;
     return (
-      <div className="absolute bottom-full left-0 right-0 mb-2 mx-3 rounded-lg border border-slate-700 bg-slate-800 shadow-xl overflow-hidden z-50">
-        <div className="px-3 py-2 border-b border-slate-700">
-          <p className="text-xs font-semibold text-slate-300">Notifications</p>
+      <div className="absolute bottom-full left-0 right-0 mb-2 mx-3 rounded-lg border border-slate-700 bg-slate-800 shadow-xl overflow-hidden z-50 dark:border-slate-600 dark:bg-slate-900">
+        <div className="px-3 py-2 border-b border-slate-700 dark:border-slate-600">
+          <p className="text-xs font-semibold text-slate-300 dark:text-slate-200">Notifications</p>
         </div>
         {!hasAnyNotif ? (
           <div className="px-3 py-4 text-center">
-            <p className="text-xs text-slate-400">All caught up</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">All caught up</p>
           </div>
         ) : (
           <div className="max-h-64 overflow-y-auto">
@@ -151,7 +152,7 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-950">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
@@ -162,7 +163,7 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-slate-900 transition-transform duration-200 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-slate-900 transition-transform duration-200 lg:static lg:translate-x-0 dark:bg-slate-900 dark:border-r dark:border-slate-800 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -194,7 +195,7 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
         </nav>
 
         {/* Notifications + user footer */}
-        <div className="border-t border-slate-700 p-3 space-y-2" ref={notifRef}>
+        <div className="border-t border-slate-700 p-3 space-y-2 dark:border-slate-800" ref={notifRef}>
           <div className="relative">
             <NotifDropdown />
             <button
@@ -223,6 +224,7 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
                 {profile.role}
               </p>
             </div>
+            <ThemeToggle className="!h-8 !w-8 !text-slate-400 hover:!bg-slate-800 hover:!text-white dark:!text-slate-400 dark:hover:!bg-slate-800 dark:hover:!text-white" />
             <button
               onClick={handleSignOut}
               className="rounded-md p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
@@ -237,11 +239,11 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar (mobile) */}
-        <header className="flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4 lg:hidden">
+        <header className="flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4 lg:hidden dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 transition-colors"
+              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 transition-colors dark:text-slate-300 dark:hover:bg-slate-800"
             >
               {sidebarOpen ? (
                 <X className="h-5 w-5" />
@@ -250,28 +252,31 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
               )}
             </button>
             <div className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-emerald-600" />
-              <span className="font-semibold text-slate-900">MentorSync</span>
+              <BookOpen className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <span className="font-semibold text-slate-900 dark:text-white">MentorSync</span>
             </div>
           </div>
-          <button
-            onClick={() => setNotifOpen(!notifOpen)}
-            className="relative rounded-lg p-2 text-slate-600 hover:bg-slate-100 transition-colors"
-          >
-            <Bell className="h-5 w-5" />
-            {unreadDisplay && (
-              <span className="absolute right-1 top-1 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[9px] font-bold leading-none text-white">
-                {unreadDisplay}
-              </span>
-            )}
-          </button>
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <button
+              onClick={() => setNotifOpen(!notifOpen)}
+              className="relative rounded-lg p-2 text-slate-600 hover:bg-slate-100 transition-colors dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadDisplay && (
+                <span className="absolute right-1 top-1 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[9px] font-bold leading-none text-white">
+                  {unreadDisplay}
+                </span>
+              )}
+            </button>
+          </div>
         </header>
 
         {/* Mobile notification dropdown */}
         {notifOpen && (
-          <div className="border-b border-slate-200 bg-white px-4 py-2 lg:hidden">
+          <div className="border-b border-slate-200 bg-white px-4 py-2 lg:hidden dark:border-slate-800 dark:bg-slate-900">
             {!hasAnyNotif ? (
-              <p className="py-3 text-center text-xs text-slate-400">
+              <p className="py-3 text-center text-xs text-slate-400 dark:text-slate-500">
                 All caught up
               </p>
             ) : (
@@ -281,14 +286,14 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
                     key={`chat-${planId}`}
                     href={`/plan/${planId}?chat=1`}
                     onClick={() => setNotifOpen(false)}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-slate-50 transition-colors dark:hover:bg-slate-800"
                   >
-                    <MessageSquare className="h-4 w-4 text-emerald-600" />
+                    <MessageSquare className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-slate-800 truncate">
+                      <p className="text-sm text-slate-800 truncate dark:text-slate-200">
                         {data.planTitle}
                       </p>
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
                         {data.messages} new chat
                       </p>
                     </div>
@@ -302,14 +307,14 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
                     key={`task-${t.taskId}`}
                     href={`/plan/${t.planId}?task=${t.taskId}&comments=1`}
                     onClick={() => setNotifOpen(false)}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-slate-50 transition-colors dark:hover:bg-slate-800"
                   >
-                    <MessageCircle className="h-4 w-4 text-sky-600" />
+                    <MessageCircle className="h-4 w-4 text-sky-600 dark:text-sky-400" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-slate-800 truncate">
+                      <p className="text-sm text-slate-800 truncate dark:text-slate-200">
                         {t.taskTitle}
                       </p>
-                      <p className="text-[11px] text-slate-500 truncate">
+                      <p className="text-[11px] text-slate-500 truncate dark:text-slate-400">
                         {t.planTitle} · {t.count} comment{t.count !== 1 ? "s" : ""}
                       </p>
                     </div>
@@ -324,7 +329,7 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
         )}
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 dark:bg-slate-950">
           <NotificationsProvider value={{ counts, refresh }}>
             {children}
           </NotificationsProvider>

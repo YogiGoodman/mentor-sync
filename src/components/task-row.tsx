@@ -45,7 +45,7 @@ export function TaskRowEditor({
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
           placeholder="Task title..."
-          className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-emerald-500 dark:focus:ring-emerald-500"
           autoFocus={autoFocus}
           onKeyDown={(e) => {
             if (e.key === "Enter" && title.trim()) onSave();
@@ -55,7 +55,7 @@ export function TaskRowEditor({
       <select
         value={taskType}
         onChange={(e) => onTaskTypeChange(e.target.value as TaskType)}
-        className="rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-700 focus:border-slate-500 focus:outline-none"
+        className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 focus:border-slate-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-emerald-500"
       >
         {TASK_TYPES.map((t) => (
           <option key={t.value} value={t.value}>
@@ -69,14 +69,14 @@ export function TaskRowEditor({
         max={maxWeek}
         value={weekNumber}
         onChange={(e) => onWeekNumberChange(Number(e.target.value))}
-        className="w-16 rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-700 focus:border-slate-500 focus:outline-none"
+        className="w-16 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 focus:border-slate-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-emerald-500"
         title="Week number"
       />
       <button
         type="button"
         onClick={onSave}
         disabled={disabled || !title.trim()}
-        className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+        className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500"
         title="Save"
       >
         <Save className="h-4 w-4" />
@@ -85,7 +85,7 @@ export function TaskRowEditor({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+          className="rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           title="Cancel"
         >
           <X className="h-4 w-4" />

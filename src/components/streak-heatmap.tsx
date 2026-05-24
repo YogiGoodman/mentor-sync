@@ -1,14 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import type { TaskWithCommentCount } from "@/lib/types/database";
-import {
-  buildHeatmapData,
-  getIntensityColor,
-  HEATMAP_COLORS,
-  computeCurrentStreak,
-} from "@/lib/heatmap";
+import { ActivityCalendar, type Activity, type ThemeInput } from "react-activity-calendar";
 import { Flame } from "lucide-react";
+import type { TaskWithCommentCount } from "@/lib/types/database";
+import { computeCurrentStreak } from "@/lib/heatmap";
+import { useTheme } from "./theme-provider";
 
 interface StreakHeatmapProps {
   tasks: TaskWithCommentCount[];
@@ -18,8 +15,70 @@ interface StreakHeatmapProps {
   showLegend?: boolean;
 }
 
-const DOW_LABELS = ["Mon", "", "Wed", "", "Fri", "", ""];
-const DOW_LABELS_SHORT = ["M", "", "W", "", "F", "", ""];
+const LIGHT_THEME: ThemeInput = {
+  light: ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"],
+  dark: ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"],
+};
+
+const DARK_THEME: ThemeInput = {
+  light: ["#1e293b", "#064e3b", "#065f46", "#059669", "#34d399"],
+  dark: ["#1e293b", "#064e3b", "#065f46", "#059669", "#34d399"],
+};
+
+function localDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function parseTimestamp(value: string): Date {
+  const normalized = value.includes("T")
+    ? value
+    : value.replace(" ", "T").replace(/([+-]\d{2})$/, "$1:00");
+  return new Date(normalized);
+}
+
+function countToLevel(count: number): 0 | 1 | 2 | 3 | 4 {
+  if (count <= 0) return 0;
+  if (count === 1) return 1;
+  if (count === 2) return 2;
+  if (count === 3) return 3;
+  return 4;
+}
+
+function buildActivities(
+  tasks: TaskWithCommentCount[],
+  startDate: string | null,
+  totalWeeks: number
+): Activity[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const start = startDate
+    ? new Date(startDate + "T00:00:00")
+    : new Date(today.getTime() - totalWeeks * 7 * 86400000);
+  start.setHours(0, 0, 0, 0);
+
+  const completionsMap: Record<string, number> = {};
+  for (const task of tasks) {
+    if (task.completed_at) {
+      const key = localDateKey(parseTimestamp(task.completed_at));
+      completionsMap[key] = (completionsMap[key] || 0) + 1;
+    }
+  }
+
+  const activities: Activity[] = [];
+  const cursor = new Date(start);
+  while (cursor <= today) {
+    const key = localDateKey(cursor);
+    const count = completionsMap[key] ?? 0;
+    activities.push({ date: key, count, level: countToLevel(count) });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return activities;
+}
 
 export function StreakHeatmap({
   tasks,
@@ -28,151 +87,44 @@ export function StreakHeatmap({
   compact = false,
   showLegend = true,
 }: StreakHeatmapProps) {
-  const { days, months, weeks } = useMemo(
-    () => buildHeatmapData(tasks, startDate, totalWeeks),
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  const activities = useMemo(
+    () => buildActivities(tasks, startDate, totalWeeks),
     [tasks, startDate, totalWeeks]
   );
 
   const streak = useMemo(() => computeCurrentStreak(tasks), [tasks]);
 
-  const cellSize = compact ? 10 : 13;
-  const gap = compact ? 2 : 3;
-  const labelWidth = compact ? 0 : 28;
-  const labels = compact ? DOW_LABELS_SHORT : DOW_LABELS;
-
   return (
-    <div className="inline-flex flex-col gap-1.5">
-      {/* Current streak badge */}
+    <div className="inline-flex flex-col gap-2">
       {!compact && streak > 0 && (
-        <div className="mb-1 flex items-center gap-1.5">
-          <Flame className="h-4 w-4 text-orange-500" />
-          <span className="text-sm font-semibold text-slate-800">
+        <div className="flex items-center gap-1.5">
+          <Flame className="h-4 w-4 text-orange-500 dark:text-orange-400" />
+          <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
             {streak} day streak
           </span>
         </div>
       )}
 
-      {/* Month headers - using CSS grid with proper column spans */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: `${labelWidth}px repeat(${weeks}, ${cellSize}px)`,
-          gap: `0 ${gap}px`,
-          marginBottom: 2,
+      <ActivityCalendar
+        data={activities}
+        theme={isDark ? DARK_THEME : LIGHT_THEME}
+        colorScheme={isDark ? "dark" : "light"}
+        blockSize={compact ? 10 : 13}
+        blockMargin={compact ? 2 : 3}
+        blockRadius={2}
+        fontSize={11}
+        showColorLegend={showLegend}
+        showMonthLabels={!compact}
+        showWeekdayLabels={compact ? false : ["mon", "wed", "fri"]}
+        showTotalCount={false}
+        labels={{
+          totalCount: "{{count}} active days",
+          legend: { less: "Less", more: "More" },
         }}
-      >
-        <div />
-        {months.map((m, i) => (
-          <div
-            key={i}
-            className="text-[11px] font-medium text-slate-500 truncate"
-            style={{
-              gridColumn: `${m.colStart + 2} / span ${m.colSpan}`,
-            }}
-          >
-            {m.colSpan >= 2 ? m.label : ""}
-          </div>
-        ))}
-      </div>
-
-      {/* Grid with day labels */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: `${labelWidth}px repeat(${weeks}, ${cellSize}px)`,
-          gridTemplateRows: `repeat(7, ${cellSize}px)`,
-          gap,
-        }}
-      >
-        {Array.from({ length: 7 }).map((_, dayIdx) => (
-          <div
-            key={`label-${dayIdx}`}
-            className="flex items-center text-slate-400"
-            style={{
-              gridColumn: 1,
-              gridRow: dayIdx + 1,
-              fontSize: compact ? 9 : 11,
-              lineHeight: `${cellSize}px`,
-            }}
-          >
-            {!compact && labels[dayIdx]}
-          </div>
-        ))}
-
-        {Array.from({ length: weeks }).map((_, weekIdx) =>
-          Array.from({ length: 7 }).map((_, dayIdx) => {
-            const idx = weekIdx * 7 + dayIdx;
-            const day = days[idx];
-
-            if (!day) {
-              return (
-                <div
-                  key={`empty-${weekIdx}-${dayIdx}`}
-                  style={{
-                    gridColumn: weekIdx + 2,
-                    gridRow: dayIdx + 1,
-                    width: cellSize,
-                    height: cellSize,
-                  }}
-                />
-              );
-            }
-
-            const bg = day.isFuture
-              ? HEATMAP_COLORS.future
-              : getIntensityColor(day.count);
-
-            return (
-              <div
-                key={day.dateKey}
-                className="rounded-sm transition-colors"
-                style={{
-                  gridColumn: weekIdx + 2,
-                  gridRow: dayIdx + 1,
-                  width: cellSize,
-                  height: cellSize,
-                  backgroundColor: bg,
-                  border: day.isFuture
-                    ? `1px solid ${HEATMAP_COLORS.futureBorder}`
-                    : undefined,
-                  outline: day.isToday
-                    ? `2px solid ${HEATMAP_COLORS.todayRing}`
-                    : undefined,
-                  outlineOffset: day.isToday ? 1 : undefined,
-                }}
-                title={`${day.dateKey}: ${day.count} task${day.count !== 1 ? "s" : ""} completed`}
-              />
-            );
-          })
-        )}
-      </div>
-
-      {/* Legend */}
-      {showLegend && (
-        <div className="flex items-center justify-between mt-1">
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-            <span>Less</span>
-            {[
-              HEATMAP_COLORS.empty,
-              HEATMAP_COLORS.level1,
-              HEATMAP_COLORS.level2,
-              HEATMAP_COLORS.level3,
-              HEATMAP_COLORS.level4,
-            ].map((color) => (
-              <div
-                key={color}
-                className="rounded-sm"
-                style={{
-                  width: compact ? 10 : 12,
-                  height: compact ? 10 : 12,
-                  backgroundColor: color,
-                }}
-              />
-            ))}
-            <span>More</span>
-          </div>
-        </div>
-      )}
+      />
     </div>
   );
 }
