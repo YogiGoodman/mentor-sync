@@ -3,18 +3,31 @@ import type { Profile } from "@/lib/types/database";
 
 /**
  * Ensures a profile row exists for the authenticated user.
- * The DB trigger should create this on signup, but it may fail if
- * migration 001 wasn't applied before the first signup.
+ * The handle_new_user() trigger should create it on signup; this is the
+ * idempotent fallback for users who signed up before the trigger existed,
+ * or whose insert lost a race with the first authed request.
  */
 export async function ensureProfile(
   supabase: SupabaseClient,
   user: { id: string; email?: string; user_metadata?: Record<string, unknown> }
 ): Promise<Profile | null> {
-  const { data: existing } = await supabase
+  const { data: existing, error: selectError } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (selectError) {
+    if (selectError.message?.includes("schema cache")) {
+      console.error(
+        "[ensureProfile] 'profiles' table missing — apply " +
+          "supabase/migrations/001_initial_schema.sql to the Supabase project."
+      );
+    } else {
+      console.error("[ensureProfile] Select failed:", selectError.message);
+    }
+    return null;
+  }
 
   if (existing) return existing as Profile;
 
@@ -34,7 +47,7 @@ export async function ensureProfile(
     .single();
 
   if (error) {
-    console.error("[ensureProfile] Failed to create profile:", error.message);
+    console.error("[ensureProfile] Insert failed:", error.message);
     return null;
   }
 

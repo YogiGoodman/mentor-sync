@@ -1,0 +1,39 @@
+# Supabase local development config.
+# Only used by `supabase start` / `supabase db reset` locally.
+# Hosted projects are configured via the Supabase Dashboard.
+
+project_id = "mentor-sync"
+
+[auth]
+enabled = true
+# Public URL for absolute redirects in auth emails. Override at runtime via
+# the SITE_URL env var when running `supabase start`.
+site_url = "http://localhost:3000"
+# Additional URLs the auth server will accept as redirect targets.
+additional_redirect_urls = [
+  "http://localhost:3000/auth/callback",
+  "https://mentor-sync-omega.vercel.app/auth/callback",
+]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+double_confirm_changes = true
+secure_password_change = false
+
+# Branded email templates. Paste the contents of these files into
+# Supabase Dashboard > Authentication > Email Templates for the hosted
+# project; the supabase CLI picks them up automatically for local dev.
+[auth.email.template.confirmation]
+subject = "Confirm your MentorSync email"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Reset your MentorSync password"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.magic_link]
+subject = "Your MentorSync sign-in link"
+content_path = "./supabase/templates/magic_link.html"

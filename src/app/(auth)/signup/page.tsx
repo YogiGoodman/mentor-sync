@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getSiteUrl } from "@/lib/site-url";
 import type { Role } from "@/lib/types/database";
 
 export default function SignupPage() {
@@ -13,6 +14,7 @@ export default function SignupPage() {
   const [role, setRole] = useState<Role>("mentee");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmSent, setConfirmSent] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -21,11 +23,12 @@ export default function SignupPage() {
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signUp({
-      email,
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
       password,
       options: {
         data: { name, role },
+        emailRedirectTo: `${getSiteUrl()}/auth/callback?next=/dashboard`,
       },
     });
 
@@ -35,29 +38,47 @@ export default function SignupPage() {
       return;
     }
 
-    // Fallback: ensure profile exists (trigger may not have run)
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // Supabase returns a user with identities: [] when the email is already
+    // registered AND email confirmation is enabled. Detect that explicitly so
+    // we don't silently fall through.
+    if (data.user && (data.user.identities?.length ?? 0) === 0) {
+      setError("An account with this email already exists. Try signing in.");
+      setLoading(false);
+      return;
+    }
 
-    if (user) {
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!existingProfile) {
-        await supabase.from("profiles").insert({
-          id: user.id,
-          name,
-          role,
-        });
-      }
+    // No session means email confirmation is required.
+    if (!data.session) {
+      setConfirmSent(true);
+      setLoading(false);
+      return;
     }
 
     router.push("/dashboard");
     router.refresh();
+  }
+
+  if (confirmSent) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="w-full max-w-md space-y-6 rounded-xl bg-white p-8 shadow-lg text-center">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Check your email
+          </h1>
+          <p className="text-sm text-slate-600">
+            We sent a confirmation link to{" "}
+            <span className="font-medium text-slate-900">{email}</span>. Click the
+            link to finish creating your account.
+          </p>
+          <Link
+            href="/login"
+            className="inline-block rounded-md bg-slate-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            Back to sign in
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -106,6 +127,7 @@ export default function SignupPage() {
               id="email"
               type="email"
               required
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
@@ -125,6 +147,7 @@ export default function SignupPage() {
               type="password"
               required
               minLength={6}
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
