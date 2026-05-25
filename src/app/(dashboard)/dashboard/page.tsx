@@ -13,6 +13,7 @@ import { ensureProfile } from "@/lib/supabase/profile";
 import { fetchPlansForUser } from "@/lib/queries/plans";
 import { fetchPlanStats, aggregateStats } from "@/lib/dashboard-stats";
 import { DashboardPlanCard } from "@/components/dashboard-plan-card";
+import { SeedPlanButton } from "@/components/seed-plan-button";
 
 export const dynamic = "force-dynamic";
 
@@ -100,7 +101,7 @@ export default async function DashboardPage() {
               : "Your learning journey at a glance"}
           </p>
         </div>
-        {profile.role === "mentor" && (
+        {profile.role === "mentor" && plans.length > 0 && (
           <Link
             href="/plan/create"
             className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors dark:bg-emerald-600 dark:hover:bg-emerald-500"
@@ -132,17 +133,17 @@ export default async function DashboardPage() {
               ? "Set up a learning plan to start tracking progress with your mentee."
               : "Your mentor hasn't assigned you to a plan yet. Hang tight!"}
           </p>
-          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-            Signed in as {profile.role} ({user.email})
-          </p>
           {profile.role === "mentor" && (
-            <Link
-              href="/plan/create"
-              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-800 transition-colors dark:bg-emerald-600 dark:hover:bg-emerald-500"
-            >
-              <Plus className="h-4 w-4" />
-              Create Plan
-            </Link>
+            <>
+              <Link
+                href="/plan/create"
+                className="mt-6 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-800 transition-colors dark:bg-emerald-600 dark:hover:bg-emerald-500"
+              >
+                <Plus className="h-4 w-4" />
+                Create Plan
+              </Link>
+              <SeedPlanButton />
+            </>
           )}
         </div>
       ) : (

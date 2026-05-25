@@ -80,10 +80,13 @@ export function PlanChatPanel({
 
   useEffect(() => {
     if (open) {
+      notif?.setActiveChatPlan(planId);
       markPlanChatRead(supabase, userId, planId).then(() => notif?.refresh());
       setTimeout(() => {
         bottomRef.current?.scrollIntoView({ behavior: "auto" });
       }, 50);
+    } else {
+      notif?.setActiveChatPlan(null);
     }
   }, [open, planId, userId, supabase, notif]);
 
@@ -124,9 +127,9 @@ export function PlanChatPanel({
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
+      <div ref={scrollRef} className="flex flex-1 flex-col overflow-y-auto px-4 py-3">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
+          <div className="flex flex-1 items-center justify-center">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-600 dark:border-slate-700 dark:border-t-emerald-400" />
           </div>
         ) : messages.length === 0 ? (
@@ -210,7 +213,6 @@ export function PlanChatPanel({
                                     }`}
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      onClose();
                                     }}
                                   >
                                     @{token.taskTitle}

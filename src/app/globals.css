@@ -25,6 +25,14 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+/* Tailwind Preflight resets button cursor to auto — restore expected behaviour */
+button:not(:disabled) {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
 @keyframes hero-float {
   0%, 100% { transform: translateY(0) rotate(-1deg); }
   50% { transform: translateY(-8px) rotate(1deg); }

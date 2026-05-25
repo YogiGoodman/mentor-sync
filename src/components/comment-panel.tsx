@@ -142,7 +142,7 @@ export function CommentPanel({ task, userId, open, onClose }: CommentPanelProps)
             <button
               type="submit"
               disabled={!message.trim() || sending}
-              className="flex h-[38px] w-[38px] items-center justify-center rounded-lg bg-emerald-600 text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+              className="flex h-[38px] w-[38px] items-center justify-center rounded-lg bg-emerald-600 text-white transition-colors hover:bg-emerald-700 disabled:opacity-40 dark:bg-emerald-500 dark:hover:bg-emerald-400"
             >
               <Send className="h-4 w-4" />
             </button>

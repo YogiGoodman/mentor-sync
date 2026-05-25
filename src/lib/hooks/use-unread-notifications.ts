@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   fetchUnreadCounts,
@@ -21,6 +21,13 @@ export function useUnreadNotifications(userId: string, role: string) {
   // Memoize so the realtime channel isn't torn down + rebuilt every render,
   // which caused mentor notifications to arrive only after a manual refresh.
   const supabase = useMemo(() => createClient(), []);
+  // Tracks which plan's chat panel is currently open and visible. Messages
+  // from that plan should not trigger a refresh — the panel marks them read
+  // in real time, so refreshing would cause a visible counter flicker.
+  const activeChatPlanRef = useRef<string | null>(null);
+  const setActiveChatPlan = useCallback((planId: string | null) => {
+    activeChatPlanRef.current = planId;
+  }, []);
 
   const refresh = useCallback(async () => {
     let planIds: string[] = [];
@@ -67,8 +74,13 @@ export function useUnreadNotifications(userId: string, role: string) {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "plan_messages" },
         (payload) => {
-          const m = payload.new as { user_id: string };
-          if (m.user_id !== userId) refresh();
+          const m = payload.new as { user_id: string; plan_id: string };
+          // Skip refresh if this message is from the plan whose chat is
+          // currently open — the panel marks it read immediately, so
+          // refreshing would cause a counter flicker.
+          if (m.user_id !== userId && m.plan_id !== activeChatPlanRef.current) {
+            refresh();
+          }
         }
       )
       .on(
@@ -98,5 +110,5 @@ export function useUnreadNotifications(userId: string, role: string) {
     };
   }, [userId, supabase, refresh]);
 
-  return { counts, refresh };
+  return { counts, refresh, setActiveChatPlan };
 }

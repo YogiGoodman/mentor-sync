@@ -31,7 +31,7 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createClient();
-  const { counts, refresh } = useUnreadNotifications(profile.id, profile.role);
+  const { counts, refresh, setActiveChatPlan } = useUnreadNotifications(profile.id, profile.role);
   const notifRef = useRef<HTMLDivElement>(null);
 
   async function handleSignOut() {
@@ -330,7 +330,7 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 dark:bg-slate-950">
-          <NotificationsProvider value={{ counts, refresh }}>
+          <NotificationsProvider value={{ counts, refresh, setActiveChatPlan }}>
             {children}
           </NotificationsProvider>
         </main>
