@@ -116,3 +116,93 @@ export function aggregateStats(planStats: PlanStats[]): AggregateStats {
       totalTasks > 0 ? Math.round((totalCompleted / totalTasks) * 100) : 0,
   };
 }
+
+export interface MentorOverview {
+  total_plans: number;
+  total_mentees: number;
+  pending_requests: number;
+  completions_this_week: number;
+  recent_activity: {
+    task_title: string;
+    plan_title: string;
+    completed_at: string;
+  }[];
+}
+
+export async function computeMentorOverview(
+  supabase: SupabaseClient,
+  mentorId: string
+): Promise<MentorOverview> {
+  const { data: plans } = await supabase
+    .from("plans")
+    .select("id, title")
+    .eq("created_by", mentorId);
+  const planIds = (plans ?? []).map((p) => p.id);
+  const titleMap = new Map((plans ?? []).map((p) => [p.id, p.title]));
+
+  if (planIds.length === 0) {
+    return {
+      total_plans: 0,
+      total_mentees: 0,
+      pending_requests: 0,
+      completions_this_week: 0,
+      recent_activity: [],
+    };
+  }
+
+  const [{ data: phases }, { data: assignments }, { count: pendingCount }] =
+    await Promise.all([
+      supabase.from("phases").select("id, plan_id").in("plan_id", planIds),
+      supabase
+        .from("plan_assignments")
+        .select("mentee_id", { count: "exact" })
+        .in("plan_id", planIds),
+      supabase
+        .from("plan_access_requests")
+        .select("id", { count: "exact", head: true })
+        .in("plan_id", planIds)
+        .eq("status", "pending"),
+    ]);
+
+  const phaseIds = (phases ?? []).map((p) => p.id);
+  const phaseToPlan = new Map((phases ?? []).map((p) => [p.id, p.plan_id]));
+
+  let completionsThisWeek = 0;
+  const recent: MentorOverview["recent_activity"] = [];
+
+  if (phaseIds.length > 0) {
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: recentTasks } = await supabase
+      .from("tasks")
+      .select("title, phase_id, completed_at")
+      .in("phase_id", phaseIds)
+      .not("completed_at", "is", null)
+      .order("completed_at", { ascending: false })
+      .limit(50);
+
+    for (const t of recentTasks ?? []) {
+      if (!t.completed_at) continue;
+      if (t.completed_at >= weekAgo) completionsThisWeek += 1;
+      if (recent.length < 10) {
+        const planId = phaseToPlan.get(t.phase_id);
+        recent.push({
+          task_title: t.title,
+          plan_title: planId ? titleMap.get(planId) ?? "" : "",
+          completed_at: t.completed_at,
+        });
+      }
+    }
+  }
+
+  // unique mentees across plans
+  const menteeSet = new Set<string>();
+  for (const a of assignments ?? []) menteeSet.add(a.mentee_id);
+
+  return {
+    total_plans: planIds.length,
+    total_mentees: menteeSet.size,
+    pending_requests: pendingCount ?? 0,
+    completions_this_week: completionsThisWeek,
+    recent_activity: recent,
+  };
+}

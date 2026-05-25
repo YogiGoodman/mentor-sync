@@ -8,12 +8,24 @@ import {
   Flame,
   AlertTriangle,
   Zap,
+  Compass,
+  Clock,
 } from "lucide-react";
 import { ensureProfile } from "@/lib/supabase/profile";
-import { fetchPlansForUser } from "@/lib/queries/plans";
-import { fetchPlanStats, aggregateStats } from "@/lib/dashboard-stats";
+import {
+  fetchPlansForUser,
+  listMentorPlansWithCounts,
+} from "@/lib/queries/plans";
+import {
+  fetchPlanStats,
+  aggregateStats,
+  computeMentorOverview,
+} from "@/lib/dashboard-stats";
+import { listForMentee } from "@/lib/queries/access-requests";
 import { DashboardPlanCard } from "@/components/dashboard-plan-card";
 import { SeedPlanButton } from "@/components/seed-plan-button";
+import { MentorOverviewTiles } from "@/components/mentor-overview-tiles";
+import { MentorPlanCard } from "@/components/mentor-plan-card";
 
 export const dynamic = "force-dynamic";
 
@@ -28,17 +40,131 @@ export default async function DashboardPage() {
   const profile = await ensureProfile(supabase, user);
   if (!profile) redirect("/login");
 
-  const { plans, error: plansError } = await fetchPlansForUser(
-    supabase,
-    user.id,
-    profile.role
-  );
+  if (profile.role === "mentor") {
+    return <MentorDashboard userId={user.id} userName={profile.name} />;
+  }
+  return <MenteeDashboard userId={user.id} userName={profile.name} />;
+}
+
+async function MentorDashboard({
+  userId,
+  userName,
+}: {
+  userId: string;
+  userName: string;
+}) {
+  const supabase = await createClient();
+  const [{ plans }, overview] = await Promise.all([
+    listMentorPlansWithCounts(supabase, userId),
+    computeMentorOverview(supabase, userId),
+  ]);
 
   const allPlanStats = await Promise.all(
     plans.map((plan) => fetchPlanStats(supabase, plan))
   );
 
+  return (
+    <div className="relative mx-auto max-w-5xl space-y-6">
+      <BackgroundLayer />
+
+      <div className="relative flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Welcome back, {userName}
+          </h1>
+          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+            Track your mentees&apos; progress and stay in sync
+          </p>
+        </div>
+        {plans.length > 0 && (
+          <Link
+            href="/plan/create"
+            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+          >
+            <Plus className="h-4 w-4" />
+            New Plan
+          </Link>
+        )}
+      </div>
+
+      <MentorOverviewTiles overview={overview} />
+
+      {plans.length === 0 ? (
+        <EmptyState role="mentor" />
+      ) : (
+        <>
+          <section>
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-800 dark:text-slate-300">
+              Your plans
+            </h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {allPlanStats.map((ps) => {
+                const enriched = plans.find((p) => p.id === ps.plan.id);
+                return (
+                  <MentorPlanCard
+                    key={ps.plan.id}
+                    plan={ps.plan}
+                    menteeCount={enriched?.mentee_count ?? 0}
+                    pendingRequestCount={enriched?.pending_request_count ?? 0}
+                    completedAtDates={ps.completedAtDates}
+                  />
+                );
+              })}
+            </div>
+          </section>
+
+          {overview.recent_activity.length > 0 && (
+            <section>
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-800 dark:text-slate-300">
+                Recent activity
+              </h2>
+              <ul className="space-y-1.5">
+                {overview.recent_activity.map((a, i) => (
+                  <li
+                    key={i}
+                    className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500 dark:text-emerald-400" />
+                    <span className="min-w-0 flex-1 truncate text-slate-700 dark:text-slate-200">
+                      {a.task_title}
+                    </span>
+                    <span className="hidden truncate text-xs text-slate-500 sm:inline dark:text-slate-400">
+                      {a.plan_title}
+                    </span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                      <Clock className="mr-0.5 inline h-3 w-3" />
+                      {new Date(a.completed_at).toLocaleDateString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+async function MenteeDashboard({
+  userId,
+  userName,
+}: {
+  userId: string;
+  userName: string;
+}) {
+  const supabase = await createClient();
+  const [{ plans }, { requests }] = await Promise.all([
+    fetchPlansForUser(supabase, userId, "mentee"),
+    listForMentee(supabase, userId),
+  ]);
+
+  const allPlanStats = await Promise.all(
+    plans.map((plan) => fetchPlanStats(supabase, plan))
+  );
   const agg = aggregateStats(allPlanStats);
+
+  const pending = requests.filter((r) => r.status === "pending");
 
   const statTiles = [
     {
@@ -79,76 +205,44 @@ export default async function DashboardPage() {
 
   return (
     <div className="relative mx-auto max-w-5xl space-y-6">
-      {/* Abstract background layer */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 -top-10 -z-10 h-72 overflow-hidden"
-      >
-        <div className="absolute -left-20 top-0 h-72 w-72 rounded-full bg-gradient-to-br from-emerald-100/70 via-emerald-50/40 to-transparent blur-3xl dark:from-emerald-500/15 dark:via-emerald-500/5" />
-        <div className="absolute right-0 top-10 h-64 w-64 rounded-full bg-gradient-to-bl from-amber-100/60 via-rose-50/30 to-transparent blur-3xl dark:from-amber-500/10 dark:via-rose-500/5" />
-        <div className="bg-grid-fade absolute inset-0 opacity-60 [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_70%)] dark:opacity-40" />
-      </div>
+      <BackgroundLayer />
 
-      {/* Header */}
       <div className="relative flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight dark:text-white">
-            Welcome back, {profile.name}
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Welcome back, {userName}
           </h1>
           <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
-            {profile.role === "mentor"
-              ? "Track your mentees' progress and stay in sync"
-              : "Your learning journey at a glance"}
+            Your learning journey at a glance
           </p>
         </div>
-        {profile.role === "mentor" && plans.length > 0 && (
-          <Link
-            href="/plan/create"
-            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors dark:bg-emerald-600 dark:hover:bg-emerald-500"
-          >
-            <Plus className="h-4 w-4" />
-            New Plan
-          </Link>
-        )}
+        <Link
+          href="/explore"
+          className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+        >
+          <Compass className="h-4 w-4" />
+          Explore mentors
+        </Link>
       </div>
 
-      {plansError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
-          Could not load plans: {plansError}
-        </div>
+      {pending.length > 0 && (
+        <section className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm dark:border-amber-500/40 dark:bg-amber-500/10">
+          <p className="text-amber-800 dark:text-amber-300">
+            You have {pending.length} pending request{pending.length === 1 ? "" : "s"}:{" "}
+            {pending.map((r, i) => (
+              <span key={r.id}>
+                {i > 0 && ", "}
+                <span className="font-medium">{r.plan.title}</span>
+              </span>
+            ))}
+          </p>
+        </section>
       )}
 
       {plans.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-slate-200 bg-white p-12 text-center dark:border-slate-700 dark:bg-slate-900">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
-            <Zap className="h-7 w-7 text-slate-400 dark:text-slate-500" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-            {profile.role === "mentor"
-              ? "Create your first plan"
-              : "No plans yet"}
-          </h3>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {profile.role === "mentor"
-              ? "Set up a learning plan to start tracking progress with your mentee."
-              : "Your mentor hasn't assigned you to a plan yet. Hang tight!"}
-          </p>
-          {profile.role === "mentor" && (
-            <>
-              <Link
-                href="/plan/create"
-                className="mt-6 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-800 transition-colors dark:bg-emerald-600 dark:hover:bg-emerald-500"
-              >
-                <Plus className="h-4 w-4" />
-                Create Plan
-              </Link>
-              <SeedPlanButton />
-            </>
-          )}
-        </div>
+        <EmptyState role="mentee" />
       ) : (
         <>
-          {/* Stats tiles */}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {statTiles.map((tile) => (
               <div
@@ -172,10 +266,9 @@ export default async function DashboardPage() {
             ))}
           </div>
 
-          {/* Plan cards */}
           <div>
-            <h2 className="mb-3 text-sm font-semibold text-slate-800 uppercase tracking-wide dark:text-slate-300">
-              Your Plans
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-800 dark:text-slate-300">
+              Your plans
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
               {allPlanStats.map((ps) => (
@@ -193,6 +286,57 @@ export default async function DashboardPage() {
             </div>
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+function BackgroundLayer() {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-x-0 -top-10 -z-10 h-72 overflow-hidden"
+    >
+      <div className="absolute -left-20 top-0 h-72 w-72 rounded-full bg-gradient-to-br from-emerald-100/70 via-emerald-50/40 to-transparent blur-3xl dark:from-emerald-500/15 dark:via-emerald-500/5" />
+      <div className="absolute right-0 top-10 h-64 w-64 rounded-full bg-gradient-to-bl from-amber-100/60 via-rose-50/30 to-transparent blur-3xl dark:from-amber-500/10 dark:via-rose-500/5" />
+      <div className="bg-grid-fade absolute inset-0 opacity-60 [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_70%)] dark:opacity-40" />
+    </div>
+  );
+}
+
+function EmptyState({ role }: { role: "mentor" | "mentee" }) {
+  return (
+    <div className="rounded-xl border-2 border-dashed border-slate-200 bg-white p-12 text-center dark:border-slate-700 dark:bg-slate-900">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+        <Zap className="h-7 w-7 text-slate-400 dark:text-slate-500" />
+      </div>
+      <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+        {role === "mentor" ? "Create your first plan" : "No plans yet"}
+      </h3>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        {role === "mentor"
+          ? "Set up a learning plan to start tracking progress with your mentees."
+          : "Explore mentors and request access to one of their public plans."}
+      </p>
+      {role === "mentor" ? (
+        <>
+          <Link
+            href="/plan/create"
+            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+          >
+            <Plus className="h-4 w-4" />
+            Create Plan
+          </Link>
+          <SeedPlanButton />
+        </>
+      ) : (
+        <Link
+          href="/explore"
+          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+        >
+          <Compass className="h-4 w-4" />
+          Explore mentors
+        </Link>
       )}
     </div>
   );

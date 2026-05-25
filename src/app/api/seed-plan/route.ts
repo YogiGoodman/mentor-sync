@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { PLAN_TITLE, PLAN_DESCRIPTION, phases } from "@/seed/plan-data";
+import { createPlanFromTree } from "@/lib/plans/create-plan-from-tree";
 
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -13,7 +14,6 @@ function getAdminClient() {
 }
 
 export async function POST() {
-  // Auth checks via session client (reads JWT from cookies correctly)
   const supabase = await createClient();
 
   const {
@@ -31,11 +31,12 @@ export async function POST() {
     .single();
 
   if (!profile || profile.role !== "mentor") {
-    return NextResponse.json({ error: "Only mentors can load sample plans" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Only mentors can load sample plans" },
+      { status: 403 }
+    );
   }
 
-  // Data writes via service-role client — bypasses RLS since we've already
-  // verified auth + role above.
   const admin = getAdminClient();
 
   const { data: existing } = await admin
@@ -46,49 +47,36 @@ export async function POST() {
     .maybeSingle();
 
   if (existing) {
-    return NextResponse.json({ error: "Sample plan already exists" }, { status: 409 });
-  }
-
-  const { data: plan, error: planError } = await admin
-    .from("plans")
-    .insert({
-      title: PLAN_TITLE,
-      description: PLAN_DESCRIPTION,
-      total_weeks: 16,
-      created_by: user.id,
-    })
-    .select()
-    .single();
-
-  if (planError || !plan) {
-    return NextResponse.json({ error: planError?.message ?? "Failed to create plan" }, { status: 500 });
-  }
-
-  for (const phaseData of phases) {
-    const { data: phase, error: phaseError } = await admin
-      .from("phases")
-      .insert({
-        plan_id: plan.id,
-        phase_number: phaseData.phase_number,
-        title: phaseData.title,
-        description: phaseData.description,
-        strategic_focus: phaseData.strategic_focus,
-      })
-      .select()
-      .single();
-
-    if (phaseError || !phase) continue;
-
-    await admin.from("tasks").insert(
-      phaseData.tasks.map((t) => ({
-        phase_id: phase.id,
-        week_number: t.week_number,
-        title: t.title,
-        task_type: t.task_type,
-        sort_order: t.sort_order,
-      }))
+    return NextResponse.json(
+      { error: "Sample plan already exists" },
+      { status: 409 }
     );
   }
 
-  return NextResponse.json({ planId: plan.id });
+  const { planId, error } = await createPlanFromTree(
+    admin,
+    {
+      title: PLAN_TITLE,
+      description: PLAN_DESCRIPTION,
+      total_weeks: 16,
+      start_date: null,
+      phases: phases.map((p) => ({
+        phase_number: p.phase_number,
+        title: p.title,
+        description: p.description,
+        strategic_focus: p.strategic_focus,
+        tasks: p.tasks,
+      })),
+    },
+    user.id
+  );
+
+  if (error || !planId) {
+    return NextResponse.json(
+      { error: error ?? "Failed to create plan" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ planId });
 }

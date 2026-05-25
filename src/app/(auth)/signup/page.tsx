@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { BookOpen } from "lucide-react";
 import { getSiteUrl } from "@/lib/site-url";
 import type { Role } from "@/lib/types/database";
 
@@ -103,9 +104,12 @@ export default function SignupPage() {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
       <div className="w-full max-w-md space-y-8 rounded-xl bg-white p-8 shadow-lg dark:bg-slate-900 dark:ring-1 dark:ring-slate-800">
         <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            MentorSync
-          </h1>
+          <div className="inline-flex items-center gap-2.5">
+            <BookOpen className="h-7 w-7 shrink-0 text-emerald-500" />
+            <h1 className="text-2xl font-bold leading-none tracking-tight text-slate-900 dark:text-white">
+              MentorSync
+            </h1>
+          </div>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Create your account</p>
         </div>
 

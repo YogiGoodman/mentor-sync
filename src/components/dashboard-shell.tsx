@@ -16,6 +16,10 @@ import {
   Bell,
   MessageSquare,
   MessageCircle,
+  Compass,
+  Inbox,
+  Upload,
+  UserCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -56,8 +60,13 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     ...(profile.role === "mentor"
-      ? [{ name: "Create Plan", href: "/plan/create", icon: PlusCircle }]
-      : []),
+      ? [
+          { name: "Create Plan", href: "/plan/create", icon: PlusCircle },
+          { name: "Import Plan", href: "/plan/import", icon: Upload },
+          { name: "Requests", href: "/mentor/requests", icon: Inbox },
+        ]
+      : [{ name: "Explore", href: "/explore", icon: Compass }]),
+    { name: "Profile", href: "/profile/edit", icon: UserCircle },
   ];
 
   const unreadDisplay =
