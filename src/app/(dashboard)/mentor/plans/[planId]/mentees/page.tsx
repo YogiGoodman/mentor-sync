@@ -58,7 +58,7 @@ export default async function MentorPlanMenteesPage({
         </div>
       )}
 
-      <MenteeRosterTable rows={rows} />
+      <MenteeRosterTable rows={rows} planId={planId} />
     </div>
   );
 }

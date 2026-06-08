@@ -4,13 +4,16 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Comment } from "@/lib/types/database";
 
-export function useRealtimeComments(taskId: string | null) {
+export function useRealtimeComments(
+  taskId: string | null,
+  menteeId: string | null
+) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
   const supabase = useMemo(() => createClient(), []);
 
   const fetchComments = useCallback(async () => {
-    if (!taskId) {
+    if (!taskId || !menteeId) {
       setComments([]);
       return;
     }
@@ -20,21 +23,22 @@ export function useRealtimeComments(taskId: string | null) {
       .from("comments")
       .select("*, profiles(name, role)")
       .eq("task_id", taskId)
+      .eq("mentee_id", menteeId)
       .order("created_at", { ascending: true });
 
     setComments((data as Comment[]) ?? []);
     setLoading(false);
-  }, [taskId, supabase]);
+  }, [taskId, menteeId, supabase]);
 
   useEffect(() => {
     fetchComments();
   }, [fetchComments]);
 
   useEffect(() => {
-    if (!taskId) return;
+    if (!taskId || !menteeId) return;
 
     const channel = supabase
-      .channel(`comments:${taskId}`)
+      .channel(`comments:${taskId}:${menteeId}`)
       .on(
         "postgres_changes",
         {
@@ -45,6 +49,8 @@ export function useRealtimeComments(taskId: string | null) {
         },
         async (payload) => {
           const newComment = payload.new as Comment;
+          // Keep only this mentee's thread for the task.
+          if (newComment.mentee_id !== menteeId) return;
           const { data: profile } = await supabase
             .from("profiles")
             .select("name, role")
@@ -63,13 +69,14 @@ export function useRealtimeComments(taskId: string | null) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [taskId, supabase]);
+  }, [taskId, menteeId, supabase]);
 
   const addComment = async (content: string, userId: string) => {
-    if (!taskId) return;
+    if (!taskId || !menteeId) return;
 
     const { error } = await supabase.from("comments").insert({
       task_id: taskId,
+      mentee_id: menteeId,
       user_id: userId,
       content,
     });

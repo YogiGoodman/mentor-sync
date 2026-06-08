@@ -37,8 +37,10 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isAuthPage = path.startsWith("/login") || path.startsWith("/signup");
   const isAuthCallback = path.startsWith("/auth/");
+  // Public proof-of-progress pages are shareable without a session.
+  const isPublic = path.startsWith("/p/");
 
-  if (!user && !isAuthPage && !isAuthCallback && path !== "/") {
+  if (!user && !isAuthPage && !isAuthCallback && !isPublic && path !== "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

@@ -33,28 +33,6 @@ button:disabled {
   cursor: not-allowed;
 }
 
-@keyframes hero-float {
-  0%, 100% { transform: translateY(0) rotate(-1deg); }
-  50% { transform: translateY(-8px) rotate(1deg); }
-}
-
-@keyframes doodle-float {
-  0%, 100% { transform: translateY(0) rotate(var(--doodle-rot, 0deg)); }
-  50% { transform: translateY(-6px) rotate(var(--doodle-rot, 0deg)); }
-}
-
-.animate-hero-float {
-  animation: hero-float 6s ease-in-out infinite;
-}
-
-.animate-doodle-float {
-  animation: doodle-float 5s ease-in-out infinite;
-}
-
-.animate-doodle-float-delayed {
-  animation: doodle-float 7s ease-in-out infinite 1.5s;
-}
-
 .bg-grid-fade {
   background-image:
     radial-gradient(circle at 1px 1px, rgba(15, 23, 42, 0.06) 1px, transparent 0);

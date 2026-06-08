@@ -10,6 +10,7 @@ interface WeekSectionProps {
   onToggleBlocked: (taskId: string) => void;
   onOpenComments: (taskId: string) => void;
   highlightedTaskId?: string | null;
+  readOnly?: boolean;
 }
 
 export function WeekSection({
@@ -19,6 +20,7 @@ export function WeekSection({
   onToggleBlocked,
   onOpenComments,
   highlightedTaskId,
+  readOnly,
 }: WeekSectionProps) {
   const weekendTasks = tasks.filter(
     (t) => t.task_type === "weekend" || t.task_type === "full_focus"
@@ -48,6 +50,7 @@ export function WeekSection({
                 onToggleBlocked={onToggleBlocked}
                 onOpenComments={onOpenComments}
                 highlighted={task.id === highlightedTaskId}
+                readOnly={readOnly}
               />
             ))
           ) : (
@@ -69,6 +72,7 @@ export function WeekSection({
                 onToggleBlocked={onToggleBlocked}
                 onOpenComments={onOpenComments}
                 highlighted={task.id === highlightedTaskId}
+                readOnly={readOnly}
               />
             ))
           ) : (

@@ -12,13 +12,15 @@ import type { TaskWithCommentCount } from "@/lib/types/database";
 interface CommentPanelProps {
   task: TaskWithCommentCount | null;
   userId: string;
+  menteeId: string | null;
   open: boolean;
   onClose: () => void;
 }
 
-export function CommentPanel({ task, userId, open, onClose }: CommentPanelProps) {
+export function CommentPanel({ task, userId, menteeId, open, onClose }: CommentPanelProps) {
   const { comments, loading, addComment } = useRealtimeComments(
-    task?.id ?? null
+    task?.id ?? null,
+    menteeId
   );
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -31,12 +33,12 @@ export function CommentPanel({ task, userId, open, onClose }: CommentPanelProps)
   }, [comments]);
 
   useEffect(() => {
-    if (open && task?.id) {
-      markTaskCommentsRead(supabase, userId, task.id).then(() =>
+    if (open && task?.id && menteeId) {
+      markTaskCommentsRead(supabase, userId, task.id, menteeId).then(() =>
         notif?.refresh()
       );
     }
-  }, [open, task?.id, userId, supabase, notif]);
+  }, [open, task?.id, menteeId, userId, supabase, notif]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,8 +46,8 @@ export function CommentPanel({ task, userId, open, onClose }: CommentPanelProps)
 
     setSending(true);
     await addComment(message.trim(), userId);
-    if (task?.id) {
-      await markTaskCommentsRead(supabase, userId, task.id);
+    if (task?.id && menteeId) {
+      await markTaskCommentsRead(supabase, userId, task.id, menteeId);
       notif?.refresh();
     }
     setMessage("");

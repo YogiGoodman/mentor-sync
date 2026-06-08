@@ -12,6 +12,7 @@ interface PhaseSectionProps {
   onToggleBlocked: (taskId: string) => void;
   onOpenComments: (taskId: string) => void;
   highlightedTaskId?: string | null;
+  readOnly?: boolean;
 }
 
 export function PhaseSection({
@@ -21,6 +22,7 @@ export function PhaseSection({
   onToggleBlocked,
   onOpenComments,
   highlightedTaskId,
+  readOnly,
 }: PhaseSectionProps) {
   const [expanded, setExpanded] = useState(true);
 
@@ -92,6 +94,7 @@ export function PhaseSection({
                 onToggleBlocked={onToggleBlocked}
                 onOpenComments={onOpenComments}
                 highlightedTaskId={highlightedTaskId}
+                readOnly={readOnly}
               />
             ))}
           </div>

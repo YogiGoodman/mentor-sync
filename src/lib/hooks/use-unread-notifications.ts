@@ -4,17 +4,11 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   fetchUnreadCounts,
+  emptyUnreadCounts,
   type UnreadCounts,
 } from "@/lib/queries/notifications";
 
-const EMPTY: UnreadCounts = {
-  totalComments: 0,
-  totalMessages: 0,
-  total: 0,
-  byPlan: {},
-  byTask: {},
-  byTaskMeta: {},
-};
+const EMPTY = emptyUnreadCounts();
 
 export function useUnreadNotifications(userId: string, role: string) {
   const [counts, setCounts] = useState<UnreadCounts>(EMPTY);
@@ -24,9 +18,9 @@ export function useUnreadNotifications(userId: string, role: string) {
   // Tracks which plan's chat panel is currently open and visible. Messages
   // from that plan should not trigger a refresh — the panel marks them read
   // in real time, so refreshing would cause a visible counter flicker.
-  const activeChatPlanRef = useRef<string | null>(null);
-  const setActiveChatPlan = useCallback((planId: string | null) => {
-    activeChatPlanRef.current = planId;
+  const activeChatThreadRef = useRef<string | null>(null);
+  const setActiveChatThread = useCallback((threadKey: string | null) => {
+    activeChatThreadRef.current = threadKey;
   }, []);
 
   const refresh = useCallback(async () => {
@@ -74,11 +68,16 @@ export function useUnreadNotifications(userId: string, role: string) {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "plan_messages" },
         (payload) => {
-          const m = payload.new as { user_id: string; plan_id: string };
-          // Skip refresh if this message is from the plan whose chat is
-          // currently open — the panel marks it read immediately, so
-          // refreshing would cause a counter flicker.
-          if (m.user_id !== userId && m.plan_id !== activeChatPlanRef.current) {
+          const m = payload.new as {
+            user_id: string;
+            plan_id: string;
+            mentee_id: string;
+          };
+          // Skip refresh if this message belongs to the (plan, mentee) thread
+          // whose chat is currently open — the panel marks it read immediately,
+          // so refreshing would cause a counter flicker.
+          const key = `${m.plan_id}:${m.mentee_id}`;
+          if (m.user_id !== userId && key !== activeChatThreadRef.current) {
             refresh();
           }
         }
@@ -110,5 +109,5 @@ export function useUnreadNotifications(userId: string, role: string) {
     };
   }, [userId, supabase, refresh]);
 
-  return { counts, refresh, setActiveChatPlan };
+  return { counts, refresh, setActiveChatThread };
 }

@@ -8,10 +8,12 @@ export const dynamic = "force-dynamic";
 
 interface PlanPageProps {
   params: Promise<{ planId: string }>;
+  searchParams: Promise<{ mentee?: string }>;
 }
 
-export default async function PlanPage({ params }: PlanPageProps) {
+export default async function PlanPage({ params, searchParams }: PlanPageProps) {
   const { planId } = await params;
+  const { mentee: menteeParam } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -42,6 +44,33 @@ export default async function PlanPage({ params }: PlanPageProps) {
     .eq("plan_id", planId)
     .order("phase_number");
 
+  // Resolve the per-mentee context. A mentee always views their own instance.
+  // A mentor must pick a mentee (?mentee=) that is assigned to the plan; without
+  // one they see the read-only template overview.
+  const role = profile.role as Role;
+  let menteeId: string | null = null;
+  let menteeName: string | null = null;
+
+  if (role === "mentee") {
+    menteeId = user.id;
+  } else if (menteeParam) {
+    const { data: assignment } = await supabase
+      .from("plan_assignments")
+      .select("mentee_id")
+      .eq("plan_id", planId)
+      .eq("mentee_id", menteeParam)
+      .maybeSingle();
+    if (assignment) {
+      menteeId = menteeParam;
+      const { data: m } = await supabase
+        .from("profiles")
+        .select("name")
+        .eq("id", menteeParam)
+        .single();
+      menteeName = m?.name ?? null;
+    }
+  }
+
   return (
     <Suspense
       fallback={
@@ -54,7 +83,10 @@ export default async function PlanPage({ params }: PlanPageProps) {
         plan={plan}
         phases={(phases as Phase[]) ?? []}
         userId={user.id}
-        role={profile.role as Role}
+        role={role}
+        menteeId={menteeId}
+        menteeName={menteeName}
+        interactive={role === "mentee"}
       />
     </Suspense>
   );

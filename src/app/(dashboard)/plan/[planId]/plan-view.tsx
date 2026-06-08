@@ -2,15 +2,17 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import type { Plan, Phase, TaskWithCommentCount, Role } from "@/lib/types/database";
+import type { Plan, Phase, Role } from "@/lib/types/database";
 import { useRealtimeTasks, getTasksByPhaseAndWeek } from "@/lib/hooks/use-realtime-tasks";
 import { PhaseSection } from "@/components/phase-section";
 import { CommentPanel } from "@/components/comment-panel";
 import { PlanChatPanel } from "@/components/plan-chat-panel";
 import { StreakHeatmap } from "@/components/streak-heatmap";
 import { ProgressGauge } from "@/components/progress-gauge";
+import { MomentumStrip } from "@/components/momentum-strip";
 import { countActiveDays } from "@/lib/heatmap";
-import { ArrowLeft, Settings, Flame, MessageSquare, ChevronUp } from "lucide-react";
+import { computeMomentum } from "@/lib/momentum";
+import { ArrowLeft, Settings, Flame, MessageSquare, ChevronUp, Users } from "lucide-react";
 import Link from "next/link";
 import { useNotifications } from "@/lib/hooks/notifications-context";
 
@@ -19,20 +21,39 @@ interface PlanViewProps {
   phases: Phase[];
   userId: string;
   role: Role;
+  /** Thread / progress owner. Mentee = self; mentor = selected mentee or null. */
+  menteeId: string | null;
+  menteeName?: string | null;
+  /** Whether the current viewer may edit progress (mentee on own instance). */
+  interactive: boolean;
 }
 
-export function PlanView({ plan, phases, userId, role }: PlanViewProps) {
+export function PlanView({
+  plan,
+  phases,
+  userId,
+  role,
+  menteeId,
+  menteeName,
+  interactive,
+}: PlanViewProps) {
   const searchParams = useSearchParams();
   const phaseIds = useMemo(() => phases.map((p) => p.id), [phases]);
   const { tasks, loading, toggleComplete, toggleBlocked } =
-    useRealtimeTasks(phaseIds);
+    useRealtimeTasks(phaseIds, menteeId);
+
+  // A mentor who hasn't picked a mentee sees the read-only template overview.
+  const mentorNoMentee = role === "mentor" && !menteeId;
+  const readOnly = !interactive;
 
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMinimized, setChatMinimized] = useState(false);
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const notif = useNotifications();
-  const chatUnread = notif?.counts.byPlan[plan.id]?.messages ?? 0;
+  const chatUnread = menteeId
+    ? notif?.counts.chatThreads[`${plan.id}:${menteeId}`]?.messages ?? 0
+    : 0;
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
 
@@ -46,6 +67,10 @@ export function PlanView({ plan, phases, userId, role }: PlanViewProps) {
   const overallProgress =
     totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
   const activeDays = useMemo(() => countActiveDays(tasks), [tasks]);
+  const momentum = useMemo(
+    () => computeMomentum(tasks, plan.start_date, plan.total_weeks),
+    [tasks, plan.start_date, plan.total_weeks]
+  );
 
   // Handle ?chat=1 deep link
   useEffect(() => {
@@ -109,20 +134,54 @@ export function PlanView({ plan, phases, userId, role }: PlanViewProps) {
             <h1 className="text-2xl font-bold text-slate-900 truncate dark:text-white">
               {plan.title}
             </h1>
+            {role === "mentor" && menteeName && (
+              <p className="mt-0.5 inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                <Users className="h-3.5 w-3.5" />
+                Viewing {menteeName}&apos;s progress
+              </p>
+            )}
             {plan.description && (
               <p className="mt-1 text-slate-600 text-sm dark:text-slate-400">{plan.description}</p>
             )}
           </div>
           {role === "mentor" && (
-            <Link
-              href={`/plan/${plan.id}/manage`}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 shrink-0 transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              <Settings className="h-4 w-4" />
-              <span className="hidden sm:inline">Manage</span>
-            </Link>
+            <div className="flex shrink-0 items-center gap-2">
+              <Link
+                href={`/mentor/plans/${plan.id}/mentees`}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                <Users className="h-4 w-4" />
+                <span className="hidden sm:inline">Mentees</span>
+              </Link>
+              <Link
+                href={`/plan/${plan.id}/manage`}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">Manage</span>
+              </Link>
+            </div>
           )}
         </div>
+
+        {mentorNoMentee && (
+          <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+            <Users className="h-4 w-4 shrink-0" />
+            <span className="flex-1">
+              This is the plan template. Pick a mentee to see their progress and
+              open their private chat.
+            </span>
+            <Link
+              href={`/mentor/plans/${plan.id}/mentees`}
+              className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+            >
+              Choose mentee
+            </Link>
+          </div>
+        )}
+
+        {/* Momentum */}
+        {menteeId && <MomentumStrip momentum={momentum} />}
 
         {/* Progress Section */}
         <div className="grid gap-4 md:grid-cols-[1fr_auto]">
@@ -169,15 +228,16 @@ export function PlanView({ plan, phases, userId, role }: PlanViewProps) {
               tasks={grouped[phase.id] ?? {}}
               onToggleComplete={toggleComplete}
               onToggleBlocked={toggleBlocked}
-              onOpenComments={setSelectedTaskId}
+              onOpenComments={menteeId ? setSelectedTaskId : () => {}}
               highlightedTaskId={highlightedTaskId}
+              readOnly={readOnly}
             />
           ))}
         </div>
       </div>
 
       {/* Floating chat FAB */}
-      {!chatOpen && (
+      {menteeId && !chatOpen && (
         <button
           onClick={() => {
             setChatOpen(true);
@@ -196,7 +256,7 @@ export function PlanView({ plan, phases, userId, role }: PlanViewProps) {
       )}
 
       {/* Minimized chat bar */}
-      {chatOpen && chatMinimized && (
+      {menteeId && chatOpen && chatMinimized && (
         <button
           onClick={() => setChatMinimized(false)}
           className="fixed bottom-0 right-6 z-40 flex h-12 w-72 items-center gap-2 rounded-t-lg bg-slate-900 px-4 text-white shadow-lg hover:bg-slate-800 transition-colors dark:bg-slate-800 dark:hover:bg-slate-700"
@@ -217,22 +277,26 @@ export function PlanView({ plan, phases, userId, role }: PlanViewProps) {
       <CommentPanel
         task={selectedTask}
         userId={userId}
-        open={selectedTaskId !== null}
+        menteeId={menteeId}
+        open={selectedTaskId !== null && menteeId !== null}
         onClose={() => setSelectedTaskId(null)}
       />
 
       {/* Plan Chat Panel */}
-      <PlanChatPanel
-        planId={plan.id}
-        userId={userId}
-        tasks={tasks}
-        open={chatOpen && !chatMinimized}
-        onClose={() => {
-          setChatOpen(false);
-          setChatMinimized(false);
-        }}
-        onMinimize={() => setChatMinimized(true)}
-      />
+      {menteeId && (
+        <PlanChatPanel
+          planId={plan.id}
+          menteeId={menteeId}
+          userId={userId}
+          tasks={tasks}
+          open={chatOpen && !chatMinimized}
+          onClose={() => {
+            setChatOpen(false);
+            setChatMinimized(false);
+          }}
+          onMinimize={() => setChatMinimized(true)}
+        />
+      )}
     </>
   );
 }

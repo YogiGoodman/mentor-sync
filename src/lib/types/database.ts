@@ -75,17 +75,26 @@ export interface Phase {
   strategic_focus: string | null;
 }
 
+// `tasks` is a shared curriculum template — it carries no per-mentee state.
 export interface Task {
   id: string;
   phase_id: string;
   week_number: number;
   title: string;
   task_type: TaskType;
+  sort_order: number;
+  created_at: string;
+}
+
+// Per-mentee overlay: completion / blocked state for one mentee on one task.
+export interface TaskProgress {
+  id: string;
+  task_id: string;
+  mentee_id: string;
   is_completed: boolean;
   is_blocked: boolean;
   completed_at: string | null;
-  sort_order: number;
-  created_at: string;
+  updated_at: string;
 }
 
 export interface CommentAuthor {
@@ -96,6 +105,7 @@ export interface CommentAuthor {
 export interface Comment {
   id: string;
   task_id: string;
+  mentee_id: string;
   user_id: string;
   content: string;
   created_at: string;
@@ -110,13 +120,21 @@ export interface PhaseWithTasks extends Phase {
   tasks: TaskWithCommentCount[];
 }
 
+// Client-side merged shape: template task + the active mentee's progress
+// overlay + comment count. `is_completed` / `is_blocked` / `completed_at`
+// reflect the mentee currently in context (default false / null when no
+// task_progress row exists yet).
 export interface TaskWithCommentCount extends Task {
+  is_completed: boolean;
+  is_blocked: boolean;
+  completed_at: string | null;
   comment_count: number;
 }
 
 export interface PlanMessage {
   id: string;
   plan_id: string;
+  mentee_id: string;
   user_id: string;
   content: string;
   mention_task_ids: string[];
@@ -127,11 +145,13 @@ export interface PlanMessage {
 export interface PlanChatRead {
   user_id: string;
   plan_id: string;
+  mentee_id: string;
   last_read_at: string;
 }
 
 export interface TaskCommentRead {
   user_id: string;
   task_id: string;
+  mentee_id: string;
   last_read_at: string;
 }

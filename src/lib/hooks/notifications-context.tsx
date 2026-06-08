@@ -6,7 +6,8 @@ import type { UnreadCounts } from "@/lib/queries/notifications";
 interface NotificationsContextValue {
   counts: UnreadCounts;
   refresh: () => Promise<void>;
-  setActiveChatPlan: (planId: string | null) => void;
+  // Active (plan, mentee) chat thread, keyed `${planId}:${menteeId}` or null.
+  setActiveChatThread: (threadKey: string | null) => void;
 }
 
 const NotificationsContext = createContext<NotificationsContextValue | null>(

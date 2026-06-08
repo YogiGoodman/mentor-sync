@@ -18,7 +18,6 @@ import {
   MessageCircle,
   Compass,
   Inbox,
-  Upload,
   UserCircle,
 } from "lucide-react";
 import Link from "next/link";
@@ -35,7 +34,7 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createClient();
-  const { counts, refresh, setActiveChatPlan } = useUnreadNotifications(profile.id, profile.role);
+  const { counts, refresh, setActiveChatThread } = useUnreadNotifications(profile.id, profile.role);
   const notifRef = useRef<HTMLDivElement>(null);
 
   async function handleSignOut() {
@@ -62,7 +61,6 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
     ...(profile.role === "mentor"
       ? [
           { name: "Create Plan", href: "/plan/create", icon: PlusCircle },
-          { name: "Import Plan", href: "/plan/import", icon: Upload },
           { name: "Requests", href: "/mentor/requests", icon: Inbox },
         ]
       : [{ name: "Explore", href: "/explore", icon: Compass }]),
@@ -72,14 +70,12 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
   const unreadDisplay =
     counts.total > 9 ? "9+" : counts.total > 0 ? String(counts.total) : null;
 
-  const chatEntries = Object.entries(counts.byPlan).filter(
+  const chatEntries = Object.entries(counts.chatThreads).filter(
     ([, v]) => v.messages > 0
   );
-  const taskEntries = Object.entries(counts.byTaskMeta).map(([taskId, meta]) => ({
-    taskId,
-    ...meta,
-    count: counts.byTask[taskId] ?? 0,
-  }));
+  const taskEntries = Object.entries(counts.taskThreads).filter(
+    ([, v]) => v.count > 0
+  );
   const hasAnyNotif = chatEntries.length > 0 || taskEntries.length > 0;
 
   function NotifBadge({ className = "" }: { className?: string }) {
@@ -108,10 +104,10 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
           </div>
         ) : (
           <div className="max-h-64 overflow-y-auto">
-            {chatEntries.map(([planId, data]) => (
+            {chatEntries.map(([key, data]) => (
               <Link
-                key={`chat-${planId}`}
-                href={`/plan/${planId}?chat=1`}
+                key={`chat-${key}`}
+                href={`/plan/${data.planId}?mentee=${data.menteeId}&chat=1`}
                 onClick={() => setNotifOpen(false)}
                 className="flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-slate-700/60 transition-colors"
               >
@@ -121,6 +117,7 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-slate-200 truncate">
                     {data.planTitle}
+                    {data.menteeName ? ` · ${data.menteeName}` : ""}
                   </p>
                   <p className="text-[11px] text-slate-400 mt-0.5">
                     {data.messages} new chat message{data.messages !== 1 ? "s" : ""}
@@ -131,10 +128,10 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
                 </span>
               </Link>
             ))}
-            {taskEntries.map((t) => (
+            {taskEntries.map(([key, t]) => (
               <Link
-                key={`task-${t.taskId}`}
-                href={`/plan/${t.planId}?task=${t.taskId}&comments=1`}
+                key={`task-${key}`}
+                href={`/plan/${t.planId}?mentee=${t.menteeId}&task=${t.taskId}&comments=1`}
                 onClick={() => setNotifOpen(false)}
                 className="flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-slate-700/60 transition-colors"
               >
@@ -146,7 +143,9 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
                     {t.taskTitle}
                   </p>
                   <p className="text-[11px] text-slate-400 mt-0.5 truncate">
-                    {t.planTitle} · {t.count} new comment{t.count !== 1 ? "s" : ""}
+                    {t.planTitle}
+                    {t.menteeName ? ` · ${t.menteeName}` : ""} · {t.count} new
+                    comment{t.count !== 1 ? "s" : ""}
                   </p>
                 </div>
                 <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-sky-500 px-1.5 text-[10px] font-bold text-white">
@@ -222,7 +221,7 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
           </div>
 
           <div className="flex items-center gap-3 rounded-lg px-3 py-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 text-sm font-semibold text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-sm font-semibold text-white">
               {profile.name.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
@@ -290,10 +289,10 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
               </p>
             ) : (
               <div className="space-y-1">
-                {chatEntries.map(([planId, data]) => (
+                {chatEntries.map(([key, data]) => (
                   <Link
-                    key={`chat-${planId}`}
-                    href={`/plan/${planId}?chat=1`}
+                    key={`chat-${key}`}
+                    href={`/plan/${data.planId}?mentee=${data.menteeId}&chat=1`}
                     onClick={() => setNotifOpen(false)}
                     className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-slate-50 transition-colors dark:hover:bg-slate-800"
                   >
@@ -301,6 +300,7 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-slate-800 truncate dark:text-slate-200">
                         {data.planTitle}
+                        {data.menteeName ? ` · ${data.menteeName}` : ""}
                       </p>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
                         {data.messages} new chat
@@ -311,10 +311,10 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
                     </span>
                   </Link>
                 ))}
-                {taskEntries.map((t) => (
+                {taskEntries.map(([key, t]) => (
                   <Link
-                    key={`task-${t.taskId}`}
-                    href={`/plan/${t.planId}?task=${t.taskId}&comments=1`}
+                    key={`task-${key}`}
+                    href={`/plan/${t.planId}?mentee=${t.menteeId}&task=${t.taskId}&comments=1`}
                     onClick={() => setNotifOpen(false)}
                     className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-slate-50 transition-colors dark:hover:bg-slate-800"
                   >
@@ -324,7 +324,9 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
                         {t.taskTitle}
                       </p>
                       <p className="text-[11px] text-slate-500 truncate dark:text-slate-400">
-                        {t.planTitle} · {t.count} comment{t.count !== 1 ? "s" : ""}
+                        {t.planTitle}
+                        {t.menteeName ? ` · ${t.menteeName}` : ""} · {t.count}{" "}
+                        comment{t.count !== 1 ? "s" : ""}
                       </p>
                     </div>
                     <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-sky-500 px-1.5 text-[10px] font-bold text-white">
@@ -339,7 +341,7 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 dark:bg-slate-950">
-          <NotificationsProvider value={{ counts, refresh, setActiveChatPlan }}>
+          <NotificationsProvider value={{ counts, refresh, setActiveChatThread }}>
             {children}
           </NotificationsProvider>
         </main>

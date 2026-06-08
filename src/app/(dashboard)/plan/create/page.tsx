@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, Plus, Trash2, PenLine, Upload } from "lucide-react";
 import Link from "next/link";
 import { TaskRowEditor } from "@/components/task-row";
+import { PlanImportForm } from "@/components/plan-import-form";
 import type { TaskType } from "@/lib/types/database";
+
+type CreateMode = "build" | "import";
 
 interface DraftTask {
   title: string;
@@ -46,6 +49,10 @@ export default function CreatePlanPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [mode, setMode] = useState<CreateMode>(
+    searchParams.get("mode") === "import" ? "import" : "build"
+  );
   const supabase = createClient();
 
   function updatePhase(index: number, patch: Partial<DraftPhase>) {
@@ -156,6 +163,63 @@ export default function CreatePlanPage() {
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Create New Plan</h1>
       </div>
 
+      {/* Build vs import */}
+      <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900">
+        <button
+          type="button"
+          onClick={() => setMode("build")}
+          className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            mode === "build"
+              ? "bg-slate-900 text-white dark:bg-emerald-600"
+              : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+          }`}
+        >
+          <PenLine className="h-4 w-4" />
+          Build manually
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("import")}
+          className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            mode === "import"
+              ? "bg-slate-900 text-white dark:bg-emerald-600"
+              : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+          }`}
+        >
+          <Upload className="h-4 w-4" />
+          Import from file
+        </button>
+      </div>
+
+      {mode === "import" && (
+        <div className="space-y-6">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Upload a JSON or CSV that adheres to the plan schema. Validate,
+            preview, then commit.
+          </p>
+          <PlanImportForm />
+          <section className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+            <p className="mb-2 font-semibold text-slate-700 dark:text-slate-200">
+              Schema reference
+            </p>
+            <p className="mb-1">
+              <strong>JSON</strong>:{" "}
+              <code>{`{ title, description, total_weeks, start_date?, phases: [ { phase_number, title, description, strategic_focus, tasks: [ { week_number, title, task_type, sort_order } ] } ] }`}</code>
+            </p>
+            <p>
+              <strong>CSV columns</strong>: phase_number, phase_title,
+              phase_description, phase_strategic_focus, week_number, task_title,
+              task_type, sort_order.
+            </p>
+            <p className="mt-1">
+              <strong>task_type</strong> must be one of{" "}
+              <code>weekend | weekday | milestone | full_focus</code>.
+            </p>
+          </section>
+        </div>
+      )}
+
+      {mode === "build" && (
       <form
         onSubmit={handleSubmit}
         className="space-y-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
@@ -349,6 +413,7 @@ export default function CreatePlanPage() {
           {loading ? "Creating..." : "Create Plan"}
         </button>
       </form>
+      )}
     </div>
   );
 }

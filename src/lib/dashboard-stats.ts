@@ -18,9 +18,15 @@ export interface PlanStats {
   completedAtDates: string[];
 }
 
+/**
+ * Stats for a plan. Progress lives in the per-mentee `task_progress` overlay:
+ * pass `menteeId` for a single mentee's view (mentee dashboard), or omit it to
+ * aggregate every mentee's activity (mentor plan card heatmap).
+ */
 export async function fetchPlanStats(
   supabase: SupabaseClient,
-  plan: Plan
+  plan: Plan,
+  menteeId?: string
 ): Promise<PlanStats> {
   const { data: phases } = await supabase
     .from("phases")
@@ -43,17 +49,28 @@ export async function fetchPlanStats(
 
   const { data: tasks } = await supabase
     .from("tasks")
-    .select("is_completed, is_blocked, completed_at")
+    .select("id")
     .in("phase_id", phaseIds);
+  const taskIds = (tasks ?? []).map((t) => t.id);
+  const total = taskIds.length;
 
-  const all = tasks ?? [];
-  const total = all.length;
-  const completed = all.filter((t) => t.is_completed).length;
-  const blockedCount = all.filter((t) => t.is_blocked).length;
+  let progress: { is_completed: boolean; is_blocked: boolean; completed_at: string | null }[] = [];
+  if (taskIds.length > 0) {
+    let q = supabase
+      .from("task_progress")
+      .select("is_completed, is_blocked, completed_at")
+      .in("task_id", taskIds);
+    if (menteeId) q = q.eq("mentee_id", menteeId);
+    const { data } = await q;
+    progress = data ?? [];
+  }
+
+  const completed = progress.filter((t) => t.is_completed).length;
+  const blockedCount = progress.filter((t) => t.is_blocked).length;
 
   const dateSet = new Set<string>();
   const completedAtDates: string[] = [];
-  for (const t of all) {
+  for (const t of progress) {
     if (t.completed_at) {
       const d = localDateKey(new Date(t.completed_at));
       completedAtDates.push(t.completed_at);
@@ -172,24 +189,37 @@ export async function computeMentorOverview(
 
   if (phaseIds.length > 0) {
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const { data: recentTasks } = await supabase
-      .from("tasks")
-      .select("title, phase_id, completed_at")
-      .in("phase_id", phaseIds)
-      .not("completed_at", "is", null)
-      .order("completed_at", { ascending: false })
-      .limit(50);
 
-    for (const t of recentTasks ?? []) {
-      if (!t.completed_at) continue;
-      if (t.completed_at >= weekAgo) completionsThisWeek += 1;
-      if (recent.length < 10) {
-        const planId = phaseToPlan.get(t.phase_id);
-        recent.push({
-          task_title: t.title,
-          plan_title: planId ? titleMap.get(planId) ?? "" : "",
-          completed_at: t.completed_at,
-        });
+    // Completions now live in task_progress; map back to task + plan for display.
+    const { data: planTasks } = await supabase
+      .from("tasks")
+      .select("id, title, phase_id")
+      .in("phase_id", phaseIds);
+    const taskTitle = new Map((planTasks ?? []).map((t) => [t.id, t.title]));
+    const taskPhase = new Map((planTasks ?? []).map((t) => [t.id, t.phase_id]));
+    const taskIds = (planTasks ?? []).map((t) => t.id);
+
+    if (taskIds.length > 0) {
+      const { data: completions } = await supabase
+        .from("task_progress")
+        .select("task_id, completed_at")
+        .in("task_id", taskIds)
+        .not("completed_at", "is", null)
+        .order("completed_at", { ascending: false })
+        .limit(50);
+
+      for (const c of completions ?? []) {
+        if (!c.completed_at) continue;
+        if (c.completed_at >= weekAgo) completionsThisWeek += 1;
+        if (recent.length < 10) {
+          const phaseId = taskPhase.get(c.task_id);
+          const planId = phaseId ? phaseToPlan.get(phaseId) : undefined;
+          recent.push({
+            task_title: taskTitle.get(c.task_id) ?? "Task",
+            plan_title: planId ? titleMap.get(planId) ?? "" : "",
+            completed_at: c.completed_at,
+          });
+        }
       }
     }
   }

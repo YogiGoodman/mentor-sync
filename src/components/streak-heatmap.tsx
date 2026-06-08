@@ -60,6 +60,16 @@ function buildActivities(
     : new Date(today.getTime() - totalWeeks * 7 * 86400000);
   start.setHours(0, 0, 0, 0);
 
+  // Render the full plan window, not just up to today. A plan that starts
+  // today (or in the future) would otherwise collapse to a single column,
+  // and react-activity-calendar reflows that degenerate grid on every
+  // completion toggle — visible as a flicker. Extend to at least the plan's
+  // end (start + totalWeeks) and never stop before today.
+  const end = new Date(
+    Math.max(start.getTime() + totalWeeks * 7 * 86400000, today.getTime())
+  );
+  end.setHours(0, 0, 0, 0);
+
   const completionsMap: Record<string, number> = {};
   for (const task of tasks) {
     if (task.completed_at) {
@@ -70,7 +80,7 @@ function buildActivities(
 
   const activities: Activity[] = [];
   const cursor = new Date(start);
-  while (cursor <= today) {
+  while (cursor <= end) {
     const key = localDateKey(cursor);
     const count = completionsMap[key] ?? 0;
     activities.push({ date: key, count, level: countToLevel(count) });

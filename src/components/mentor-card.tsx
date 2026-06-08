@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen } from "lucide-react";
 import type { MentorSummary } from "@/lib/queries/discovery";
 
 interface MentorCardProps {
@@ -31,18 +31,17 @@ export function MentorCard({ mentor }: MentorCardProps) {
 
       {mentor.skills.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {mentor.skills.slice(0, 6).map((s) => (
+          {mentor.skills.slice(0, 5).map((s) => (
             <span
               key={s}
-              className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+              className="rounded-md border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 dark:border-slate-700 dark:text-slate-300"
             >
-              <Sparkles className="h-3 w-3" />
               {s}
             </span>
           ))}
-          {mentor.skills.length > 6 && (
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-              +{mentor.skills.length - 6}
+          {mentor.skills.length > 5 && (
+            <span className="px-1 py-0.5 text-xs text-slate-400 dark:text-slate-500">
+              +{mentor.skills.length - 5} more
             </span>
           )}
         </div>

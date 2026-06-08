@@ -13,6 +13,7 @@ import Link from "next/link";
 
 interface PlanChatPanelProps {
   planId: string;
+  menteeId: string;
   userId: string;
   tasks: TaskWithCommentCount[];
   open: boolean;
@@ -54,6 +55,7 @@ function groupMessagesByDate(messages: PlanMessage[]) {
 
 export function PlanChatPanel({
   planId,
+  menteeId,
   userId,
   tasks,
   open,
@@ -61,7 +63,7 @@ export function PlanChatPanel({
   onMinimize,
 }: PlanChatPanelProps) {
   const { messages, loading, hasMore, loadingMore, loadOlder, sendMessage } =
-    useRealtimePlanChat(open ? planId : null);
+    useRealtimePlanChat(open ? planId : null, menteeId);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
@@ -80,19 +82,21 @@ export function PlanChatPanel({
 
   useEffect(() => {
     if (open) {
-      notif?.setActiveChatPlan(planId);
-      markPlanChatRead(supabase, userId, planId).then(() => notif?.refresh());
+      notif?.setActiveChatThread(`${planId}:${menteeId}`);
+      markPlanChatRead(supabase, userId, planId, menteeId).then(() =>
+        notif?.refresh()
+      );
       setTimeout(() => {
         bottomRef.current?.scrollIntoView({ behavior: "auto" });
       }, 50);
     } else {
-      notif?.setActiveChatPlan(null);
+      notif?.setActiveChatThread(null);
     }
-  }, [open, planId, userId, supabase, notif]);
+  }, [open, planId, menteeId, userId, supabase, notif]);
 
   async function handleSend(content: string) {
     await sendMessage(content, userId);
-    await markPlanChatRead(supabase, userId, planId);
+    await markPlanChatRead(supabase, userId, planId, menteeId);
     notif?.refresh();
   }
 
@@ -204,7 +208,7 @@ export function PlanChatPanel({
                                 token.type === "task" ? (
                                   <Link
                                     key={i}
-                                    href={`/plan/${planId}?task=${token.taskId}`}
+                                    href={`/plan/${planId}?mentee=${menteeId}&task=${token.taskId}`}
                                     title={token.taskTitle}
                                     className={`inline-block max-w-[180px] truncate align-middle rounded-md px-1.5 py-0.5 text-xs font-semibold transition-colors ${
                                       isOwn

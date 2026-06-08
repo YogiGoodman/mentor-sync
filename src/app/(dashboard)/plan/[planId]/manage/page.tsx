@@ -3,7 +3,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, Pencil, UserPlus } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Pencil,
+  UserPlus,
+  Save,
+  X,
+  Loader2,
+  AlertTriangle,
+} from "lucide-react";
 import Link from "next/link";
 import type { Plan, Phase, Task, TaskType, Profile } from "@/lib/types/database";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +46,14 @@ export default function ManagePlanPage() {
   const [editType, setEditType] = useState<TaskType>("weekday");
   const [editWeek, setEditWeek] = useState(1);
 
+  // Plan rename / delete
+  const [editingMeta, setEditingMeta] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [descDraft, setDescDraft] = useState("");
+  const [savingMeta, setSavingMeta] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   const fetchData = useCallback(async () => {
     const { data: planData } = await supabase
       .from("plans")
@@ -49,6 +67,8 @@ export default function ManagePlanPage() {
     }
 
     setPlan(planData);
+    setTitleDraft(planData.title);
+    setDescDraft(planData.description ?? "");
 
     const { data: phasesData } = await supabase
       .from("phases")
@@ -162,6 +182,37 @@ export default function ManagePlanPage() {
     }
   }
 
+  async function savePlanMeta() {
+    if (!titleDraft.trim()) return;
+    setSavingMeta(true);
+    const { error } = await supabase
+      .from("plans")
+      .update({
+        title: titleDraft.trim(),
+        description: descDraft.trim() || null,
+      })
+      .eq("id", params.planId);
+    setSavingMeta(false);
+    if (!error) {
+      setEditingMeta(false);
+      fetchData();
+    }
+  }
+
+  async function deletePlan() {
+    setDeleting(true);
+    const { error } = await supabase
+      .from("plans")
+      .delete()
+      .eq("id", params.planId);
+    if (error) {
+      setDeleting(false);
+      return;
+    }
+    // phases, tasks, assignments and progress cascade-delete with the plan.
+    router.push("/dashboard");
+  }
+
   async function toggleMenteeAssignment(menteeId: string) {
     if (assignedMentees.includes(menteeId)) {
       await supabase
@@ -207,7 +258,79 @@ export default function ManagePlanPage() {
             {assignedMentees.length} mentee(s)
           </p>
         </div>
+        {!editingMeta && (
+          <button
+            onClick={() => setEditingMeta(true)}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Rename
+          </button>
+        )}
       </div>
+
+      {/* Plan details (rename) */}
+      {editingMeta && (
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <h2 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
+            Plan details
+          </h2>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                Title
+              </label>
+              <input
+                type="text"
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                maxLength={200}
+                placeholder="Plan title..."
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-emerald-500 dark:focus:ring-emerald-500"
+                onKeyDown={(e) => e.key === "Enter" && savePlanMeta()}
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                Description
+              </label>
+              <textarea
+                value={descDraft}
+                onChange={(e) => setDescDraft(e.target.value)}
+                rows={2}
+                placeholder="Optional description..."
+                className="w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-emerald-500 dark:focus:ring-emerald-500"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={savePlanMeta}
+                disabled={!titleDraft.trim() || savingMeta}
+                className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+              >
+                {savingMeta ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Save
+              </button>
+              <button
+                onClick={() => {
+                  setEditingMeta(false);
+                  setTitleDraft(plan.title);
+                  setDescDraft(plan.description ?? "");
+                }}
+                className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                <X className="h-4 w-4" />
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Assign Mentees */}
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -386,6 +509,54 @@ export default function ManagePlanPage() {
             Add Phase
           </button>
         </div>
+      </div>
+
+      {/* Danger zone — delete plan */}
+      <div className="rounded-xl border border-red-200 bg-red-50/50 p-5 dark:border-red-500/30 dark:bg-red-500/5">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 text-red-500 dark:text-red-400" />
+          <h2 className="text-sm font-semibold text-red-700 dark:text-red-300">
+            Danger zone
+          </h2>
+        </div>
+        <p className="mt-1 text-sm text-red-600/80 dark:text-red-300/70">
+          Deleting this plan permanently removes its phases, tasks, mentee
+          assignments and all progress. This cannot be undone.
+        </p>
+        {confirmDelete ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-red-700 dark:text-red-300">
+              Delete &ldquo;{plan.title}&rdquo;?
+            </span>
+            <button
+              onClick={deletePlan}
+              disabled={deleting}
+              className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              {deleting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              Yes, delete
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              disabled={deleting}
+              className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-white disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="mt-3 inline-flex items-center gap-2 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-500/10"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete plan
+          </button>
+        )}
       </div>
     </div>
   );

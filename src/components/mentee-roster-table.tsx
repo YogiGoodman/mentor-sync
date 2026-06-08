@@ -1,10 +1,42 @@
+import Link from "next/link";
+import { ArrowRight, AlertTriangle, Clock, TrendingDown, Check } from "lucide-react";
 import type { MenteeRosterRow } from "@/lib/queries/plans";
+
+function StatusChips({ row }: { row: MenteeRosterRow }) {
+  if (!row.at_risk) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/30">
+        <Check className="h-3 w-3" /> On track
+      </span>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-1">
+      {row.behind && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30">
+          <TrendingDown className="h-3 w-3" /> Behind
+        </span>
+      )}
+      {row.stalled_days !== null && row.stalled_days >= 7 && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 ring-1 ring-inset ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
+          <Clock className="h-3 w-3" /> {row.stalled_days}d idle
+        </span>
+      )}
+      {row.blockers > 0 && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700 ring-1 ring-inset ring-red-200 dark:bg-red-500/10 dark:text-red-300 dark:ring-red-500/30">
+          <AlertTriangle className="h-3 w-3" /> {row.blockers} blocked
+        </span>
+      )}
+    </div>
+  );
+}
 
 interface MenteeRosterTableProps {
   rows: MenteeRosterRow[];
+  planId: string;
 }
 
-export function MenteeRosterTable({ rows }: MenteeRosterTableProps) {
+export function MenteeRosterTable({ rows, planId }: MenteeRosterTableProps) {
   if (rows.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
@@ -20,7 +52,9 @@ export function MenteeRosterTable({ rows }: MenteeRosterTableProps) {
             <th className="px-4 py-3 font-medium">Mentee</th>
             <th className="px-4 py-3 font-medium">Joined</th>
             <th className="px-4 py-3 font-medium">Progress</th>
+            <th className="px-4 py-3 font-medium">Status</th>
             <th className="px-4 py-3 font-medium">Last activity</th>
+            <th className="px-4 py-3 font-medium sr-only">Open</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -56,10 +90,22 @@ export function MenteeRosterTable({ rows }: MenteeRosterTableProps) {
                     </span>
                   </div>
                 </td>
+                <td className="px-4 py-3">
+                  <StatusChips row={r} />
+                </td>
                 <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
                   {r.last_activity
                     ? new Date(r.last_activity).toLocaleDateString()
                     : "—"}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <Link
+                    href={`/plan/${planId}?mentee=${r.mentee_id}`}
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    Open
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
                 </td>
               </tr>
             );

@@ -11,6 +11,7 @@ interface TaskCardProps {
   onToggleBlocked: (taskId: string) => void;
   onOpenComments: (taskId: string) => void;
   highlighted?: boolean;
+  readOnly?: boolean;
 }
 
 const typeLabels: Record<TaskType, string> = {
@@ -26,6 +27,7 @@ export function TaskCard({
   onToggleBlocked,
   onOpenComments,
   highlighted,
+  readOnly,
 }: TaskCardProps) {
   return (
     <div
@@ -43,8 +45,10 @@ export function TaskCard({
       <div className="flex items-start gap-3">
         {/* Checkbox */}
         <button
-          onClick={() => onToggleComplete(task.id)}
-          className="mt-0.5 flex-shrink-0"
+          onClick={() => !readOnly && onToggleComplete(task.id)}
+          disabled={readOnly}
+          className={cn("mt-0.5 flex-shrink-0", readOnly && "cursor-default")}
+          title={readOnly ? "Mentee progress (read-only)" : undefined}
         >
           {task.is_completed ? (
             <CheckCircle2 className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
@@ -72,18 +76,29 @@ export function TaskCard({
 
         {/* Actions */}
         <div className="flex items-center gap-1">
-          <button
-            onClick={() => onToggleBlocked(task.id)}
-            className={cn(
-              "rounded-md p-1.5 transition-colors",
-              task.is_blocked
-                ? "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300"
-                : "text-slate-300 hover:bg-slate-100 hover:text-amber-500 dark:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-amber-400"
-            )}
-            title={task.is_blocked ? "Remove blocker" : "Flag as blocked"}
-          >
-            <AlertTriangle className="h-4 w-4" />
-          </button>
+          {readOnly ? (
+            task.is_blocked && (
+              <span
+                className="rounded-md p-1.5 text-red-500 dark:text-red-400"
+                title="Mentee flagged this as blocked"
+              >
+                <AlertTriangle className="h-4 w-4" />
+              </span>
+            )
+          ) : (
+            <button
+              onClick={() => onToggleBlocked(task.id)}
+              className={cn(
+                "rounded-md p-1.5 transition-colors",
+                task.is_blocked
+                  ? "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300"
+                  : "text-slate-300 hover:bg-slate-100 hover:text-amber-500 dark:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-amber-400"
+              )}
+              title={task.is_blocked ? "Remove blocker" : "Flag as blocked"}
+            >
+              <AlertTriangle className="h-4 w-4" />
+            </button>
+          )}
 
           <button
             onClick={() => onOpenComments(task.id)}

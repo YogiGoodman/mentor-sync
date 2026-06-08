@@ -10,11 +10,13 @@ import {
   Zap,
   Compass,
   Clock,
+  ShieldCheck,
 } from "lucide-react";
 import { ensureProfile } from "@/lib/supabase/profile";
 import {
   fetchPlansForUser,
   listMentorPlansWithCounts,
+  listAtRiskMentees,
 } from "@/lib/queries/plans";
 import {
   fetchPlanStats,
@@ -26,6 +28,7 @@ import { DashboardPlanCard } from "@/components/dashboard-plan-card";
 import { SeedPlanButton } from "@/components/seed-plan-button";
 import { MentorOverviewTiles } from "@/components/mentor-overview-tiles";
 import { MentorPlanCard } from "@/components/mentor-plan-card";
+import { AtRiskPanel } from "@/components/at-risk-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -59,15 +62,17 @@ async function MentorDashboard({
     computeMentorOverview(supabase, userId),
   ]);
 
-  const allPlanStats = await Promise.all(
-    plans.map((plan) => fetchPlanStats(supabase, plan))
-  );
+  const [allPlanStats, atRisk] = await Promise.all([
+    Promise.all(plans.map((plan) => fetchPlanStats(supabase, plan))),
+    listAtRiskMentees(
+      supabase,
+      plans.map((p) => ({ id: p.id, title: p.title }))
+    ),
+  ]);
 
   return (
-    <div className="relative mx-auto max-w-5xl space-y-6">
-      <BackgroundLayer />
-
-      <div className="relative flex items-center justify-between">
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Welcome back, {userName}
@@ -88,6 +93,8 @@ async function MentorDashboard({
       </div>
 
       <MentorOverviewTiles overview={overview} />
+
+      <AtRiskPanel mentees={atRisk} />
 
       {plans.length === 0 ? (
         <EmptyState role="mentor" />
@@ -160,7 +167,7 @@ async function MenteeDashboard({
   ]);
 
   const allPlanStats = await Promise.all(
-    plans.map((plan) => fetchPlanStats(supabase, plan))
+    plans.map((plan) => fetchPlanStats(supabase, plan, userId))
   );
   const agg = aggregateStats(allPlanStats);
 
@@ -204,10 +211,8 @@ async function MenteeDashboard({
   ];
 
   return (
-    <div className="relative mx-auto max-w-5xl space-y-6">
-      <BackgroundLayer />
-
-      <div className="relative flex items-center justify-between">
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Welcome back, {userName}
@@ -216,13 +221,23 @@ async function MenteeDashboard({
             Your learning journey at a glance
           </p>
         </div>
-        <Link
-          href="/explore"
-          className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
-        >
-          <Compass className="h-4 w-4" />
-          Explore mentors
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/p/${userId}`}
+            target="_blank"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            <span className="hidden sm:inline">Share progress</span>
+          </Link>
+          <Link
+            href="/explore"
+            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+          >
+            <Compass className="h-4 w-4" />
+            Explore mentors
+          </Link>
+        </div>
       </div>
 
       {pending.length > 0 && (
@@ -287,19 +302,6 @@ async function MenteeDashboard({
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-function BackgroundLayer() {
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 -top-10 -z-10 h-72 overflow-hidden"
-    >
-      <div className="absolute -left-20 top-0 h-72 w-72 rounded-full bg-gradient-to-br from-emerald-100/70 via-emerald-50/40 to-transparent blur-3xl dark:from-emerald-500/15 dark:via-emerald-500/5" />
-      <div className="absolute right-0 top-10 h-64 w-64 rounded-full bg-gradient-to-bl from-amber-100/60 via-rose-50/30 to-transparent blur-3xl dark:from-amber-500/10 dark:via-rose-500/5" />
-      <div className="bg-grid-fade absolute inset-0 opacity-60 [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_70%)] dark:opacity-40" />
     </div>
   );
 }

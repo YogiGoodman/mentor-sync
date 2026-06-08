@@ -10,7 +10,7 @@ function localDateKey(d: Date): string {
 // Supabase realtime delivers TIMESTAMPTZ as raw postgres format
 // (e.g. "2026-05-24 10:30:45.123456+00") which Safari/strict parsers
 // reject. Normalize to ISO 8601 before constructing a Date.
-function parseTimestamp(value: string): Date {
+export function parseTimestamp(value: string): Date {
   const normalized = value.includes("T")
     ? value
     : value.replace(" ", "T").replace(/([+-]\d{2})$/, "$1:00");
