@@ -66,7 +66,7 @@ export function PlanChatPanel({
     useRealtimePlanChat(open ? planId : null, menteeId);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const notif = useNotifications();
   const prevMsgCount = useRef(0);
 
@@ -92,7 +92,11 @@ export function PlanChatPanel({
     } else {
       notif?.setActiveChatThread(null);
     }
-  }, [open, planId, menteeId, userId, supabase, notif]);
+    // Run only when the opened thread changes — `supabase` and `notif` are
+    // stable callbacks; including them would re-fire on every counts update
+    // (this effect calls notif.refresh()), causing an infinite render/fetch loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, planId, menteeId, userId]);
 
   async function handleSend(content: string) {
     await sendMessage(content, userId);

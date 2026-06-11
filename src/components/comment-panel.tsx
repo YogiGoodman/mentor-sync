@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { useRealtimeComments } from "@/lib/hooks/use-realtime-comments";
 import { markTaskCommentsRead } from "@/lib/queries/notifications";
@@ -25,7 +25,7 @@ export function CommentPanel({ task, userId, menteeId, open, onClose }: CommentP
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const notif = useNotifications();
 
   useEffect(() => {
@@ -38,7 +38,11 @@ export function CommentPanel({ task, userId, menteeId, open, onClose }: CommentP
         notif?.refresh()
       );
     }
-  }, [open, task?.id, menteeId, userId, supabase, notif]);
+    // Run only when the opened thread changes — `supabase` and `notif` are
+    // stable callbacks; including them would re-fire on every counts update
+    // (this effect calls notif.refresh()), causing an infinite render/fetch loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, task?.id, menteeId, userId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
