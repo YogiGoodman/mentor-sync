@@ -28,7 +28,7 @@ export function useRealtimePlanChat(
     setLoading(true);
     const { data, count } = await supabase
       .from("plan_messages")
-      .select("*, profiles(name, role)", { count: "exact" })
+      .select("*, profiles:profiles!user_id(name, role)", { count: "exact" })
       .eq("plan_id", planId)
       .eq("mentee_id", menteeId)
       .order("created_at", { ascending: false })
@@ -49,7 +49,7 @@ export function useRealtimePlanChat(
     const oldest = messages[0];
     const { data } = await supabase
       .from("plan_messages")
-      .select("*, profiles(name, role)", { count: "exact" })
+      .select("*, profiles:profiles!user_id(name, role)", { count: "exact" })
       .eq("plan_id", planId)
       .eq("mentee_id", menteeId)
       .lt("created_at", oldest.created_at)

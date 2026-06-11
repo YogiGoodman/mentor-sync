@@ -21,7 +21,7 @@ export function useRealtimeComments(
     setLoading(true);
     const { data } = await supabase
       .from("comments")
-      .select("*, profiles(name, role)")
+      .select("*, profiles:profiles!user_id(name, role)")
       .eq("task_id", taskId)
       .eq("mentee_id", menteeId)
       .order("created_at", { ascending: true });
